@@ -24,10 +24,10 @@ export default function Home() {
       <section className="pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
         <div className="max-w-4xl mx-auto text-center space-y-6">
           <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold leading-tight">
-            Stop Flying Blind.<br />Know Your Numbers.
+            Track Leads in 30 Seconds.<br />From Your Phone.
           </h1>
           <p className="text-lg sm:text-xl text-slate-300 max-w-2xl mx-auto leading-relaxed">
-            You&apos;re spending money on ads. But can you answer this: <span className="font-semibold text-white">How many leads did you get today? How many turned into customers?</span>
+            Too busy to sit at a desk? Log leads in the field with one hand. No typing. No setup. Just <span className="font-semibold text-white">service, source, name—done.</span>
           </p>
 
           <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
@@ -242,20 +242,26 @@ export default function Home() {
       <section className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 bg-slate-50">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4">
-            Built for Service Business Owners
+            Works for ANY Service Business
           </h2>
           <p className="text-lg text-slate-600 mb-8">
-            If you generate leads and run ads, this is for you.
+            Field-based or appointment-driven. Any industry. Any lead source.
           </p>
 
-          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mb-8">
             {[
-              'HVAC Contractors',
-              'Plumbing Companies',
-              'Roofing Businesses',
-              'Cleaning Services',
+              'HVAC & Heating',
+              'Plumbing',
+              'Electrical',
+              'Roofing',
+              'Tree Service',
               'Landscaping',
-              'Any Service Business',
+              'Pest Control',
+              'Cleaning',
+              'Appliance Repair',
+              'Carpentry',
+              'Window Cleaning',
+              'And More...',
             ].map((industry) => (
               <div
                 key={industry}
@@ -266,7 +272,16 @@ export default function Home() {
             ))}
           </div>
 
-          <p className="text-slate-600 mt-8">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+            <p className="text-slate-700 font-semibold mb-2">
+              📱 Built for the Field, Not the Desk
+            </p>
+            <p className="text-slate-600">
+              Log leads in 30 seconds from your phone. No typing. No setup. You&apos;re busy—this gets out of your way.
+            </p>
+          </div>
+
+          <p className="text-slate-600">
             Running Google Ads? Facebook? Getting referrals? Daily Deposits works for all of it.
           </p>
         </div>

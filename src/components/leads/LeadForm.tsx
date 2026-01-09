@@ -123,7 +123,7 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Service */}
       <div className="space-y-2">
-        <Label htmlFor="service" className="font-semibold">
+        <Label htmlFor="service" className="font-semibold text-base">
           Service
         </Label>
         <select
@@ -133,7 +133,7 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
           onChange={handleChange}
           required
           disabled={isSubmitting}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
         >
           <option value="">Select a service</option>
           {services.map((service) => (
@@ -146,7 +146,7 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
 
       {/* Source */}
       <div className="space-y-2">
-        <Label htmlFor="source" className="font-semibold">
+        <Label htmlFor="source" className="font-semibold text-base">
           Lead Source
         </Label>
         <select
@@ -156,7 +156,7 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
           onChange={handleChange}
           required
           disabled={isSubmitting}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
         >
           <option value="">Select a source</option>
           {sources.map((source) => (
@@ -169,7 +169,7 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
 
       {/* Contact Name */}
       <div className="space-y-2">
-        <Label htmlFor="contactName" className="font-semibold">
+        <Label htmlFor="contactName" className="font-semibold text-base">
           Contact Name
         </Label>
         <Input
@@ -180,24 +180,26 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
           value={formData.contactName}
           onChange={handleChange}
           disabled={isSubmitting}
+          className="text-base py-3"
         />
       </div>
 
-      {/* Notes */}
-      <div className="space-y-2">
-        <Label htmlFor="notes" className="font-semibold text-sm">
-          Notes (optional)
-        </Label>
+      {/* Notes - Optional, collapsible on mobile */}
+      <details className="space-y-2">
+        <summary className="cursor-pointer font-semibold text-base text-slate-700 hover:text-slate-900">
+          + Add Notes (optional)
+        </summary>
         <Input
           id="notes"
           name="notes"
           type="text"
-          placeholder="Add any notes..."
+          placeholder="Anything else? (Optional)"
           value={formData.notes}
           onChange={handleChange}
           disabled={isSubmitting}
+          className="text-base py-3"
         />
-      </div>
+      </details>
 
       {/* Error */}
       {error && (
@@ -213,14 +215,14 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
         </div>
       )}
 
-      {/* Submit Button */}
+      {/* Submit Button - Big & Thumb-Friendly */}
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full"
+        className="w-full mt-6 text-base h-12"
         size="lg"
       >
-        {isSubmitting ? 'Recording...' : 'Record Lead'}
+        {isSubmitting ? 'Recording...' : '✓ Record Lead'}
       </Button>
     </form>
   );
