@@ -12,9 +12,9 @@ export function Sidebar() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: '📊' },
-    { href: '/deposits', label: 'Deposits', icon: '💰' },
-    { href: '/history', label: 'History', icon: '📜' },
-    { href: '/settings', label: 'Settings', icon: '⚙️' },
+    { href: '/dashboard/record', label: 'Record Lead', icon: '➕' },
+    { href: '/dashboard/leads', label: 'Open Leads', icon: '📋' },
+    { href: '/dashboard/settings', label: 'Settings', icon: '⚙️' },
   ];
 
   return (
