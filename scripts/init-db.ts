@@ -16,6 +16,9 @@ sqlite.exec(`
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     name TEXT,
+    company_name TEXT,
+    user_type TEXT NOT NULL DEFAULT 'business_owner',
+    industry TEXT DEFAULT 'general',
     created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP
   );
@@ -37,6 +40,7 @@ sqlite.exec(`
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     user_id TEXT NOT NULL,
+    webhook_url TEXT,
     created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -73,8 +77,11 @@ sqlite.exec(`
     service TEXT NOT NULL,
     source TEXT NOT NULL,
     contact_name TEXT,
+    email TEXT,
+    phone TEXT,
     estimate_status TEXT NOT NULL DEFAULT 'PENDING',
     close_status TEXT NOT NULL DEFAULT 'OPEN',
+    estimate_amount REAL,
     revenue REAL,
     notes TEXT,
     created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -82,6 +89,15 @@ sqlite.exec(`
     FOREIGN KEY(org_id) REFERENCES orgs(id) ON DELETE CASCADE
   );
 `);
+
+// Alter existing users table to add company_name column if it doesn't exist
+try {
+  sqlite.exec(`
+    ALTER TABLE users ADD COLUMN company_name TEXT;
+  `);
+} catch {
+  // Column already exists, ignore error
+}
 
 console.log('✅ Database tables created successfully!');
 sqlite.close();

@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
   try {
     const orgId = request.nextUrl.searchParams.get('orgId');
     const userId = request.headers.get('x-user-id');
+    const closeStatusFilter = request.nextUrl.searchParams.get('closeStatus');
 
     if (!orgId || !userId) {
       return NextResponse.json(
@@ -36,16 +37,29 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get all open leads for this org
-    const leads = await db
-      .select()
-      .from(leadsTable)
-      .where(
-        and(
-          eq(leadsTable.orgId, orgId),
-          eq(leadsTable.closeStatus, 'OPEN')
-        )
-      );
+    // Get leads with optional status filter
+    let leads;
+    const isValidStatus = (status: string): status is 'OPEN' | 'WON' | 'LOST' => {
+      return ['OPEN', 'WON', 'LOST'].includes(status);
+    };
+
+    if (closeStatusFilter && closeStatusFilter !== 'ALL' && isValidStatus(closeStatusFilter)) {
+      leads = await db
+        .select()
+        .from(leadsTable)
+        .where(
+          and(
+            eq(leadsTable.orgId, orgId),
+            eq(leadsTable.closeStatus, closeStatusFilter)
+          )
+        );
+    } else {
+      // Get all leads for this org
+      leads = await db
+        .select()
+        .from(leadsTable)
+        .where(eq(leadsTable.orgId, orgId));
+    }
 
     // Sort by most recent first
     leads.sort(

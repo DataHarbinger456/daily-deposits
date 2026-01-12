@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       org: org[0],
-      services: services.map((s: { name: string }) => s.name),
-      sources: sources.map((s: { name: string }) => s.name),
+      services,
+      sources,
     });
   } catch (error) {
     console.error('Org fetch error:', error);

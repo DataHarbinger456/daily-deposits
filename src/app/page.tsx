@@ -33,18 +33,18 @@ export default function Home() {
           <div className="pt-4 flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/signup">
               <Button size="lg" className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-                Get Free Access
+                Join the Waiting List
               </Button>
             </Link>
             <Link href="/signup">
-              <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10 w-full sm:w-auto">
+              <Button size="lg" className="bg-white/20 hover:bg-white/30 text-white border border-white/40 w-full sm:w-auto font-medium">
                 See How It Works
               </Button>
             </Link>
           </div>
 
           <p className="text-sm text-slate-400 pt-2">
-            No credit card required. 30 seconds to set up.
+            Coming soon. No credit card required.
           </p>
         </div>
       </section>
@@ -343,12 +343,12 @@ export default function Home() {
 
           <Link href="/signup">
             <Button size="lg" className="bg-white text-blue-600 hover:bg-slate-100 font-semibold">
-              Start Free Today — No Credit Card
+              Join the Waiting List
             </Button>
           </Link>
 
           <p className="text-sm opacity-75">
-            Trusted by service business owners who take growth seriously.
+            Be the first to know when Daily Deposits launches.
           </p>
         </div>
       </section>

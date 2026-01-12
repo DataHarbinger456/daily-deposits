@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PasswordInput } from './PasswordInput';
 
 export function LoginForm() {
   const router = useRouter();
@@ -30,9 +31,22 @@ export function LoginForm() {
     setError(null);
 
     try {
-      // TODO: Implement NextAuth login
-      console.log('Login attempt:', formData);
-      // For now, just redirect to dashboard
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Login successful, redirect to dashboard
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -57,19 +71,15 @@ export function LoginForm() {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="••••••"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          disabled={isLoading}
-        />
-      </div>
+      <PasswordInput
+        id="password"
+        name="password"
+        label="Password"
+        value={formData.password}
+        onChange={handleChange}
+        disabled={isLoading}
+        required
+      />
 
       {error && (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">

@@ -5,15 +5,19 @@ import { generateIdFromEntropySize } from 'lucia';
 
 const createOrgSchema = z.object({
   name: z.string().min(1, 'Org name is required'),
-  services: z.array(z.string().min(1)).min(1, 'At least one service required'),
-  sources: z.array(z.string().min(1)).min(1, 'At least one source required'),
+  services: z.array(z.string().min(1)).optional(),
+  sources: z.array(z.string().min(1)).optional(),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = createOrgSchema.parse(body);
-    const { name, services, sources } = validatedData;
+    const {
+      name,
+      services = ['Service 1', 'Service 2'],
+      sources = ['Direct', 'Referral'],
+    } = validatedData;
 
     // TODO: Get user from session
     const userId = request.headers.get('x-user-id');

@@ -3,51 +3,88 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { Edit2 } from 'lucide-react';
+import { ContactDetailModal } from './ContactDetailModal';
 
 interface Lead {
   id: string;
+  orgId: string;
   service: string;
   source: string;
   contactName?: string;
-  closeStatus: string;
+  email?: string;
+  phone?: string;
+  estimateAmount?: number;
   estimateStatus: string;
-  createdAt: string;
+  closeStatus: string;
+  notes?: string;
+  createdAt: number;
+}
+
+interface Service {
+  id: string;
+  name: string;
+  orgId: string;
+}
+
+interface Source {
+  id: string;
+  name: string;
+  orgId: string;
 }
 
 interface OpenLeadsListProps {
   orgId: string;
 }
 
-const ESTIMATE_STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
-  PENDING: { bg: 'bg-yellow-50', text: 'text-yellow-700', label: '⏳ Pending' },
-  SCHEDULED: { bg: 'bg-blue-50', text: 'text-blue-700', label: '📅 Scheduled' },
-  COMPLETED: { bg: 'bg-purple-50', text: 'text-purple-700', label: '✓ Completed' },
-  NO_SHOW: { bg: 'bg-red-50', text: 'text-red-700', label: '✗ No Show' },
-};
-
 export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterSource, setFilterSource] = useState<string>('');
+  const [filterCloseStatus, setFilterCloseStatus] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
+  const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
+  const [userId, setUserId] = useState<string>('');
 
   useEffect(() => {
-    const fetchLeads = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(
-          `/api/leads/list?orgId=${orgId}`,
-          {
-            headers: { 'x-user-id': 'current-user' },
-          }
-        );
+        // Get userId from cookie
+        const cookies = document.cookie.split('; ');
+        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
+        if (!userIdCookie) {
+          throw new Error('User not authenticated');
+        }
 
-        if (!response.ok) {
+        const id = userIdCookie.split('=')[1];
+        setUserId(id);
+
+        // Fetch leads
+        const statusParam = filterCloseStatus !== 'ALL' ? `&closeStatus=${filterCloseStatus}` : '';
+        const leadsResponse = await fetch(`/api/leads/list?orgId=${orgId}${statusParam}`, {
+          headers: { 'x-user-id': id },
+        });
+
+        if (!leadsResponse.ok) {
           throw new Error('Failed to fetch leads');
         }
 
-        const data = await response.json();
-        setLeads(data.leads);
+        const leadsData = await leadsResponse.json();
+        setLeads(leadsData.leads);
+
+        // Fetch org data (services and sources)
+        const orgResponse = await fetch(`/api/org/get?orgId=${orgId}`, {
+          headers: { 'x-user-id': id },
+        });
+
+        if (orgResponse.ok) {
+          const orgData = await orgResponse.json();
+          setServices(orgData.services);
+          setSources(orgData.sources);
+        }
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to load leads'
@@ -57,39 +94,62 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
       }
     };
 
-    fetchLeads();
-  }, [orgId]);
+    fetchData();
+  }, [orgId, filterCloseStatus]);
 
   const handleStatusUpdate = async (
     leadId: string,
-    newStatus: 'WON' | 'LOST'
+    fieldType: 'closeStatus' | 'estimateStatus',
+    newStatus: string
   ) => {
     try {
+      // Get userId from cookie
+      const cookies = document.cookie.split('; ');
+      const userIdCookie = cookies.find((c) => c.startsWith('userId='));
+      if (!userIdCookie) {
+        throw new Error('User not authenticated');
+      }
+
+      const userId = userIdCookie.split('=')[1];
+      const payload: Record<string, unknown> = { leadId };
+
+      if (fieldType === 'closeStatus') {
+        payload.closeStatus = newStatus;
+      } else {
+        payload.estimateStatus = newStatus;
+      }
+
       const response = await fetch('/api/leads/update-status', {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'current-user',
+          'x-user-id': userId,
         },
-        body: JSON.stringify({
-          leadId,
-          closeStatus: newStatus,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         throw new Error('Failed to update lead');
       }
 
-      // Remove lead from list (since it's no longer open)
-      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+      // Update lead status in local state
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === leadId
+            ? {
+                ...l,
+                [fieldType]: newStatus,
+              }
+            : l
+        )
+      );
     } catch (err) {
       console.error('Update error:', err);
     }
   };
 
-  // Get unique sources for filter
-  const sources = Array.from(new Set(leads.map((l) => l.source)));
+  // Get unique sources for filter dropdown
+  const sourcesForFilter = Array.from(new Set(leads.map((l) => l.source)));
 
   // Filter and sort leads
   let filteredLeads = filterSource
@@ -162,128 +222,211 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
       </div>
 
       {/* Filters & Sort */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-slate-50 p-4 rounded-lg">
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <div className="text-sm font-semibold text-slate-700">Filter:</div>
-          <select
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-            className="rounded border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Sources</option>
-            {sources.map((source) => (
-              <option key={source} value={source}>
-                {source}
-              </option>
-            ))}
-          </select>
+      <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+            <div className="text-sm font-semibold text-slate-700">Filter by Source:</div>
+            <select
+              value={filterSource}
+              onChange={(e) => setFilterSource(e.target.value)}
+              className="rounded border border-slate-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Sources</option>
+              {sourcesForFilter.map((source) => (
+                <option key={source} value={source}>
+                  {source}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-2 text-sm">
+            <span className="font-semibold text-slate-700">Sort:</span>
+            <button
+              onClick={() => setSortBy('newest')}
+              className={`px-3 py-1 rounded ${
+                sortBy === 'newest'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Newest
+            </button>
+            <button
+              onClick={() => setSortBy('oldest')}
+              className={`px-3 py-1 rounded ${
+                sortBy === 'oldest'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Oldest
+            </button>
+          </div>
         </div>
 
-        <div className="flex gap-2 text-sm">
-          <span className="font-semibold text-slate-700">Sort:</span>
+        <div className="flex flex-wrap gap-2">
+          <div className="text-sm font-semibold text-slate-700">Filter by Status:</div>
           <button
-            onClick={() => setSortBy('newest')}
-            className={`px-3 py-1 rounded ${
-              sortBy === 'newest'
+            onClick={() => setFilterCloseStatus('ALL')}
+            className={`px-3 py-1 rounded text-sm ${
+              filterCloseStatus === 'ALL'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            Newest
+            All Leads
           </button>
           <button
-            onClick={() => setSortBy('oldest')}
-            className={`px-3 py-1 rounded ${
-              sortBy === 'oldest'
+            onClick={() => setFilterCloseStatus('OPEN')}
+            className={`px-3 py-1 rounded text-sm ${
+              filterCloseStatus === 'OPEN'
                 ? 'bg-blue-600 text-white'
                 : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
             }`}
           >
-            Oldest
+            Open
+          </button>
+          <button
+            onClick={() => setFilterCloseStatus('WON')}
+            className={`px-3 py-1 rounded text-sm ${
+              filterCloseStatus === 'WON'
+                ? 'bg-green-600 text-white'
+                : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            Won
+          </button>
+          <button
+            onClick={() => setFilterCloseStatus('LOST')}
+            className={`px-3 py-1 rounded text-sm ${
+              filterCloseStatus === 'LOST'
+                ? 'bg-red-600 text-white'
+                : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+            }`}
+          >
+            Lost
           </button>
         </div>
       </div>
 
-      {/* Leads Table/List */}
-      <div className="space-y-3">
+      {/* Leads Table */}
+      <div className="overflow-x-auto bg-white rounded-lg border border-slate-200">
         {filteredLeads.length === 0 ? (
-          <div className="text-center py-8">
+          <div className="text-center py-12">
             <p className="text-slate-500">No leads match this filter.</p>
           </div>
         ) : (
-          filteredLeads.map((lead) => {
-            const estimateColor =
-              ESTIMATE_STATUS_COLORS[lead.estimateStatus];
-            return (
-              <div
-                key={lead.id}
-                className="rounded-lg border border-slate-200 bg-white p-4 sm:p-5 hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  {/* Lead Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <h3 className="font-bold text-lg text-slate-900 truncate">
-                        {lead.contactName || 'Unnamed Lead'}
-                      </h3>
-                      <span
-                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${estimateColor.bg} ${estimateColor.text}`}
+          <table className="w-full">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Email</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Phone</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Service</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Source</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Cost</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Est. Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Closed Status</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-700">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredLeads.map((lead, index) => (
+                <tr
+                  key={lead.id}
+                  className={`border-b border-slate-200 hover:bg-slate-50 transition-colors ${
+                    index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
+                  }`}
+                >
+                  <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                    {lead.contactName || 'Unnamed'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {lead.email || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {lead.phone || '-'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {lead.service}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {lead.source}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                    {lead.estimateAmount ? `$${lead.estimateAmount.toFixed(2)}` : '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <select
+                      value={lead.estimateStatus}
+                      onChange={(e) => handleStatusUpdate(lead.id, 'estimateStatus', e.target.value)}
+                      className={`text-sm px-2.5 py-1 rounded font-semibold border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${
+                        lead.estimateStatus === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-700'
+                          : lead.estimateStatus === 'SCHEDULED'
+                          ? 'bg-blue-100 text-blue-700'
+                          : lead.estimateStatus === 'COMPLETED'
+                          ? 'bg-purple-100 text-purple-700'
+                          : 'bg-red-100 text-red-700'
+                      }`}
+                    >
+                      <option value="PENDING">⏳ Pending</option>
+                      <option value="SCHEDULED">📅 Scheduled</option>
+                      <option value="COMPLETED">✓ Completed</option>
+                      <option value="NO_SHOW">✗ No Show</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <select
+                      value={lead.closeStatus}
+                      onChange={(e) => handleStatusUpdate(lead.id, 'closeStatus', e.target.value)}
+                      disabled={lead.estimateStatus === 'PENDING' || lead.estimateStatus === 'SCHEDULED'}
+                      className={`text-sm px-2.5 py-1 rounded font-semibold border-0 focus:ring-2 focus:ring-blue-500 cursor-pointer transition-colors ${
+                        lead.closeStatus === 'OPEN'
+                          ? 'bg-blue-100 text-blue-700'
+                          : lead.closeStatus === 'WON'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-red-100 text-red-700'
+                      } ${lead.estimateStatus === 'PENDING' || lead.estimateStatus === 'SCHEDULED' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      title={
+                        lead.estimateStatus === 'PENDING' || lead.estimateStatus === 'SCHEDULED'
+                          ? 'Complete or no-show the estimate before marking as won/lost'
+                          : ''
+                      }
+                    >
+                      <option value="OPEN">🔵 Open</option>
+                      <option
+                        value="WON"
+                        disabled={lead.estimateStatus === 'PENDING' || lead.estimateStatus === 'SCHEDULED'}
                       >
-                        {estimateColor.label}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <p className="text-slate-500">Service</p>
-                        <p className="font-semibold text-slate-900">
-                          {lead.service}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Source</p>
-                        <p className="font-semibold text-slate-900">
-                          {lead.source}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Date</p>
-                        <p className="font-semibold text-slate-900">
-                          {new Date(lead.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-slate-500">Days Open</p>
-                        <p className="font-semibold text-slate-900">
-                          {Math.floor(
-                            (Date.now() - new Date(lead.createdAt).getTime()) /
-                              (1000 * 60 * 60 * 24)
-                          )}{' '}
-                          days
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 sm:flex-col sm:gap-2 w-full sm:w-auto">
+                        ✓ Won
+                      </option>
+                      <option
+                        value="LOST"
+                        disabled={lead.estimateStatus === 'PENDING' || lead.estimateStatus === 'SCHEDULED'}
+                      >
+                        ✗ Lost
+                      </option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 text-sm text-slate-600">
+                    {new Date(lead.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4">
                     <button
-                      onClick={() => handleStatusUpdate(lead.id, 'WON')}
-                      className="flex-1 sm:w-auto rounded-lg bg-green-100 px-4 py-2.5 text-sm font-semibold text-green-700 hover:bg-green-200 transition-colors"
+                      onClick={() => setSelectedContact(lead)}
+                      className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 p-2 rounded transition-colors"
+                      title="Edit contact details"
                     >
-                      ✓ Won
+                      <Edit2 className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => handleStatusUpdate(lead.id, 'LOST')}
-                      className="flex-1 sm:w-auto rounded-lg bg-red-100 px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-200 transition-colors"
-                    >
-                      ✗ Lost
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
@@ -292,6 +435,24 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
           <Button variant="outline">+ Record More Leads</Button>
         </Link>
       </div>
+
+      {/* Contact Detail Modal */}
+      {selectedContact && (
+        <ContactDetailModal
+          contact={selectedContact}
+          services={services}
+          sources={sources}
+          onClose={() => setSelectedContact(null)}
+          onSave={(updatedContact) => {
+            setLeads((prev) =>
+              prev.map((l) =>
+                l.id === updatedContact.id ? { ...l, ...updatedContact } : l
+              )
+            );
+          }}
+          userId={userId}
+        />
+      )}
     </div>
   );
 }

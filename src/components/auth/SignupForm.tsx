@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { IndustrySelector } from './IndustrySelector';
+import { PasswordInput } from './PasswordInput';
 
 export function SignupForm() {
   const router = useRouter();
@@ -13,9 +15,11 @@ export function SignupForm() {
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
+    companyName: '',
     email: '',
     password: '',
     confirmPassword: '',
+    industry: 'general',
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,8 +48,10 @@ export function SignupForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formData.name,
+          companyName: formData.companyName,
           email: formData.email,
           password: formData.password,
+          industry: formData.industry,
         }),
       });
 
@@ -64,7 +70,7 @@ export function SignupForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="name">Name</Label>
         <Input
@@ -80,6 +86,30 @@ export function SignupForm() {
       </div>
 
       <div className="space-y-2">
+        <Label htmlFor="companyName">Company Name</Label>
+        <Input
+          id="companyName"
+          name="companyName"
+          type="text"
+          placeholder="Your Company"
+          value={formData.companyName}
+          onChange={handleChange}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <IndustrySelector
+        value={formData.industry}
+        onChange={(industry) =>
+          setFormData((prev) => ({
+            ...prev,
+            industry,
+          }))
+        }
+      />
+
+      <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
           id="email"
@@ -93,33 +123,25 @@ export function SignupForm() {
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          name="password"
-          type="password"
-          placeholder="••••••"
-          value={formData.password}
-          onChange={handleChange}
-          required
-          disabled={isLoading}
-        />
-      </div>
+      <PasswordInput
+        id="password"
+        name="password"
+        label="Password"
+        value={formData.password}
+        onChange={handleChange}
+        disabled={isLoading}
+        required
+      />
 
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
-        <Input
-          id="confirmPassword"
-          name="confirmPassword"
-          type="password"
-          placeholder="••••••"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          required
-          disabled={isLoading}
-        />
-      </div>
+      <PasswordInput
+        id="confirmPassword"
+        name="confirmPassword"
+        label="Confirm Password"
+        value={formData.confirmPassword}
+        onChange={handleChange}
+        disabled={isLoading}
+        required
+      />
 
       {error && (
         <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">

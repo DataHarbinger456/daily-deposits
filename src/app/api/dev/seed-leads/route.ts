@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getDb, leadsTable, orgsTable, servicesTable, sourcesTable } from '@/lib/db';
 import { generateIdFromEntropySize } from 'lucia';
 import { eq } from 'drizzle-orm';
 
 /**
- * DEVELOPMENT ONLY: Seed test data for the demo org
- * This endpoint creates sample leads for testing the CRM
+ * DEVELOPMENT ONLY: Seed test data for an org
+ * POST /api/dev/seed-leads?orgId=... (optional, defaults to first org)
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     // Only allow in development
     if (process.env.NODE_ENV !== 'development') {
@@ -25,103 +25,85 @@ export async function POST() {
       );
     }
 
-    const DEMO_ORG_ID = 'org_demo_123';
-    const DEMO_USER_ID = 'user_demo_123';
+    const searchParams = request.nextUrl.searchParams;
+    const requestedOrgId = searchParams.get('orgId');
 
-    // Check if org exists, if not create it
-    const org = await db
-      .select()
-      .from(orgsTable)
-      .where(eq(orgsTable.id, DEMO_ORG_ID))
-      .limit(1);
+    let DEMO_ORG_ID: string;
 
-    if (!org || org.length === 0) {
-      await db.insert(orgsTable).values({
-        id: DEMO_ORG_ID,
-        name: 'Demo Tree Service',
-        userId: DEMO_USER_ID,
-      });
+    if (requestedOrgId) {
+      // Use provided org ID
+      const org = await db
+        .select()
+        .from(orgsTable)
+        .where(eq(orgsTable.id, requestedOrgId))
+        .limit(1);
 
-      // Create default services
-      const services = ['Tree Trimming', 'Tree Removal', 'Stump Grinding', 'Pruning', 'Emergency Removal'];
-      for (const service of services) {
-        await db.insert(servicesTable).values({
-          id: generateIdFromEntropySize(16),
-          name: service,
-          orgId: DEMO_ORG_ID,
-        });
+      if (!org || org.length === 0) {
+        return NextResponse.json(
+          { error: 'Organization not found' },
+          { status: 404 }
+        );
       }
+      DEMO_ORG_ID = org[0].id;
+    } else {
+      // Get first org
+      const orgs = await db
+        .select()
+        .from(orgsTable)
+        .limit(1);
 
-      // Create default sources
-      const sources = ['Google Ads', 'Facebook Ads', 'Referral', 'Website', 'Direct Call'];
-      for (const source of sources) {
-        await db.insert(sourcesTable).values({
-          id: generateIdFromEntropySize(16),
-          name: source,
-          orgId: DEMO_ORG_ID,
-        });
+      if (!orgs || orgs.length === 0) {
+        return NextResponse.json(
+          { error: 'No organizations found. Run /api/dev/setup-demo first.' },
+          { status: 400 }
+        );
       }
+      DEMO_ORG_ID = orgs[0].id;
     }
 
-    // Sample leads to create
-    const sampleLeads = [
-      {
-        service: 'Tree Trimming',
-        source: 'Google Ads',
-        contactName: 'John Rodriguez',
-        estimateStatus: 'PENDING',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Tree Removal',
-        source: 'Facebook Ads',
-        contactName: 'Sarah Johnson',
-        estimateStatus: 'SCHEDULED',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Stump Grinding',
-        source: 'Referral',
-        contactName: 'Mike Chen',
-        estimateStatus: 'PENDING',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Tree Trimming',
-        source: 'Website',
-        contactName: 'Lisa Martinez',
-        estimateStatus: 'COMPLETED',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Emergency Removal',
-        source: 'Direct Call',
-        contactName: 'Tom Wilson',
-        estimateStatus: 'PENDING',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Pruning',
-        source: 'Google Ads',
-        contactName: 'Jennifer Lee',
-        estimateStatus: 'SCHEDULED',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Tree Trimming',
-        source: 'Referral',
-        contactName: 'David Brown',
-        estimateStatus: 'PENDING',
-        closeStatus: 'OPEN',
-      },
-      {
-        service: 'Stump Grinding',
-        source: 'Facebook Ads',
-        contactName: 'Amanda Clark',
-        estimateStatus: 'SCHEDULED',
-        closeStatus: 'OPEN',
-      },
+    // Fetch org's services and sources
+    const orgServices = await db
+      .select()
+      .from(servicesTable)
+      .where(eq(servicesTable.orgId, DEMO_ORG_ID));
+
+    const orgSources = await db
+      .select()
+      .from(sourcesTable)
+      .where(eq(sourcesTable.orgId, DEMO_ORG_ID));
+
+    if (!orgServices || orgServices.length === 0 || !orgSources || orgSources.length === 0) {
+      return NextResponse.json(
+        { error: 'Organization has no services or sources configured' },
+        { status: 400 }
+      );
+    }
+
+    // Sample names for diversity (20 leads)
+    const names = [
+      'John Rodriguez', 'Sarah Johnson', 'Mike Chen', 'Lisa Martinez',
+      'Tom Wilson', 'Jennifer Lee', 'David Brown', 'Amanda Clark',
+      'Ryan Martinez', 'Emily White', 'Chris Johnson', 'Sofia Garcia',
+      'James Taylor', 'Michelle Brown', 'Daniel Lee', 'Jessica Anderson',
+      'Kevin Smith', 'Rachel Davis', 'Brandon Wilson', 'Lauren Taylor',
     ];
+
+    // Generate varied leads with different statuses and amounts
+    const sampleLeads = names.map((name, index) => {
+      const estimateStatus = ['PENDING', 'SCHEDULED', 'COMPLETED', 'NO_SHOW'][index % 4];
+      // Can only be WON/LOST if COMPLETED or NO_SHOW
+      const canBeWon = estimateStatus === 'COMPLETED' || estimateStatus === 'NO_SHOW';
+      const closeStatus = canBeWon ? ['OPEN', 'WON', 'LOST'][index % 3] : 'OPEN';
+
+      return {
+        service: orgServices[index % orgServices.length].name,
+        source: orgSources[index % orgSources.length].name,
+        contactName: name,
+        estimateStatus,
+        closeStatus,
+        estimateAmount: closeStatus === 'WON' ? Math.floor(Math.random() * 8000) + 1000 : null,
+      };
+    });
 
     // Create leads
     let createdCount = 0;

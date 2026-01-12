@@ -14,6 +14,9 @@ export const usersTableSqlite = sqliteTable('users', {
   email: text('email').notNull().unique(),
   password: text('password').notNull(),
   name: text('name'),
+  companyName: text('company_name'),
+  userType: text('user_type').default('business_owner').notNull(), // 'business_owner' | 'agency'
+  industry: text('industry').default('general'), // hvac, plumbing, electrical, etc.
   createdAt: integer('created_at', { mode: 'timestamp' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -36,6 +39,7 @@ export const orgsTableSqlite = sqliteTable('orgs', {
   userId: text('user_id')
     .notNull()
     .references(() => usersTableSqlite.id, { onDelete: 'cascade' }),
+  webhookUrl: text('webhook_url'),
   createdAt: integer('created_at', { mode: 'timestamp' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -74,12 +78,15 @@ export const leadsTableSqlite = sqliteTable('leads', {
   service: text('service').notNull(), // service name
   source: text('source').notNull(), // source name
   contactName: text('contact_name'),
+  email: text('email'),
+  phone: text('phone'),
   estimateStatus: text('estimate_status')
     .default('PENDING')
     .notNull(), // PENDING, SCHEDULED, COMPLETED, NO_SHOW
   closeStatus: text('close_status')
     .default('OPEN')
     .notNull(), // OPEN, WON, LOST
+  estimateAmount: real('estimate_amount'), // estimated cost/quote amount
   revenue: real('revenue'),
   notes: text('notes'),
   createdAt: integer('created_at', { mode: 'timestamp' })
@@ -99,6 +106,9 @@ export const usersTablePostgres = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   password: varchar('password', { length: 255 }).notNull(),
   name: varchar('name', { length: 255 }),
+  companyName: varchar('company_name', { length: 255 }),
+  userType: varchar('user_type', { length: 50 }).default('business_owner').notNull(), // 'business_owner' | 'agency'
+  industry: varchar('industry', { length: 50 }).default('general'), // hvac, plumbing, electrical, etc.
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -117,6 +127,7 @@ export const orgsTablePostgres = pgTable('orgs', {
   userId: varchar('user_id', { length: 255 })
     .notNull()
     .references(() => usersTablePostgres.id, { onDelete: 'cascade' }),
+  webhookUrl: varchar('webhook_url', { length: 500 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -147,12 +158,15 @@ export const leadsTablePostgres = pgTable('leads', {
   service: varchar('service', { length: 255 }).notNull(),
   source: varchar('source', { length: 255 }).notNull(),
   contactName: varchar('contact_name', { length: 255 }),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 20 }),
   estimateStatus: varchar('estimate_status', { length: 50 })
     .default('PENDING')
     .notNull(),
   closeStatus: varchar('close_status', { length: 50 })
     .default('OPEN')
     .notNull(),
+  estimateAmount: pgReal('estimate_amount'),
   revenue: pgReal('revenue'),
   notes: varchar('notes', { length: 1000 }),
   createdAt: timestamp('created_at').defaultNow().notNull(),

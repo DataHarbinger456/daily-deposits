@@ -5,14 +5,26 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
+interface Service {
+  id: string;
+  name: string;
+  orgId: string;
+}
+
+interface Source {
+  id: string;
+  name: string;
+  orgId: string;
+}
+
 interface LeadFormProps {
   orgId: string;
   onSuccess?: () => void;
 }
 
 export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
-  const [services, setServices] = useState<string[]>([]);
-  const [sources, setSources] = useState<string[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +34,11 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
     service: '',
     source: '',
     contactName: '',
+    email: '',
+    phone: '',
+    estimateAmount: '',
+    estimateStatus: 'PENDING',
+    closeStatus: 'OPEN',
     notes: '',
   });
 
@@ -29,12 +46,22 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
   useEffect(() => {
     const fetchOrgData = async () => {
       try {
-        const response = await fetch(
-          `/api/org/get?orgId=${orgId}`,
-          {
-            headers: { 'x-user-id': 'current-user' },
-          }
-        );
+        if (typeof window === 'undefined') {
+          setIsLoading(false);
+          return;
+        }
+
+        // Get userId from cookie
+        const cookies = document.cookie.split('; ');
+        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
+        if (!userIdCookie) {
+          throw new Error('User not authenticated');
+        }
+
+        const userId = userIdCookie.split('=')[1];
+        const response = await fetch(`/api/org/get?orgId=${orgId}`, {
+          headers: { 'x-user-id': userId },
+        });
 
         if (!response.ok) {
           throw new Error('Failed to fetch organization data');
@@ -72,17 +99,30 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
     setSuccessMessage(null);
 
     try {
+      // Get userId from cookie
+      const cookies = document.cookie.split('; ');
+      const userIdCookie = cookies.find((c) => c.startsWith('userId='));
+      if (!userIdCookie) {
+        throw new Error('User not authenticated');
+      }
+
+      const userId = userIdCookie.split('=')[1];
       const response = await fetch('/api/leads/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': 'current-user',
+          'x-user-id': userId,
         },
         body: JSON.stringify({
           orgId,
           service: formData.service,
           source: formData.source,
           contactName: formData.contactName || undefined,
+          email: formData.email || undefined,
+          phone: formData.phone || undefined,
+          estimateAmount: formData.estimateAmount ? parseFloat(formData.estimateAmount) : undefined,
+          estimateStatus: formData.estimateStatus,
+          closeStatus: formData.closeStatus,
           notes: formData.notes || undefined,
         }),
       });
@@ -97,6 +137,11 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
         service: '',
         source: '',
         contactName: '',
+        email: '',
+        phone: '',
+        estimateAmount: '',
+        estimateStatus: 'PENDING',
+        closeStatus: 'OPEN',
         notes: '',
       });
       setSuccessMessage('Lead recorded! ✓');
@@ -137,8 +182,8 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
         >
           <option value="">Select a service</option>
           {services.map((service) => (
-            <option key={service} value={service}>
-              {service}
+            <option key={service.id} value={service.name}>
+              {service.name}
             </option>
           ))}
         </select>
@@ -160,8 +205,8 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
         >
           <option value="">Select a source</option>
           {sources.map((source) => (
-            <option key={source} value={source}>
-              {source}
+            <option key={source.id} value={source.name}>
+              {source.name}
             </option>
           ))}
         </select>
@@ -182,6 +227,98 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
           disabled={isSubmitting}
           className="text-base py-3"
         />
+      </div>
+
+      {/* Email - Optional */}
+      <div className="space-y-2">
+        <Label htmlFor="email" className="text-sm text-slate-600">
+          Email (optional)
+        </Label>
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          placeholder="john@example.com"
+          value={formData.email}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="text-base py-3"
+        />
+      </div>
+
+      {/* Phone - Optional */}
+      <div className="space-y-2">
+        <Label htmlFor="phone" className="text-sm text-slate-600">
+          Phone (optional)
+        </Label>
+        <Input
+          id="phone"
+          name="phone"
+          type="tel"
+          placeholder="(555) 123-4567"
+          value={formData.phone}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="text-base py-3"
+        />
+      </div>
+
+      {/* Estimate Cost - Optional */}
+      <div className="space-y-2">
+        <Label htmlFor="estimateAmount" className="text-sm text-slate-600">
+          Estimate Cost (optional)
+        </Label>
+        <Input
+          id="estimateAmount"
+          name="estimateAmount"
+          type="number"
+          step="0.01"
+          min="0"
+          placeholder="$1,500.00"
+          value={formData.estimateAmount}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="text-base py-3"
+        />
+      </div>
+
+      {/* Estimate Status */}
+      <div className="space-y-2">
+        <Label htmlFor="estimateStatus" className="font-semibold text-base">
+          Estimate Status
+        </Label>
+        <select
+          id="estimateStatus"
+          name="estimateStatus"
+          value={formData.estimateStatus}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
+        >
+          <option value="PENDING">⏳ Pending</option>
+          <option value="SCHEDULED">📅 Scheduled</option>
+          <option value="COMPLETED">✓ Completed</option>
+          <option value="NO_SHOW">✗ No Show</option>
+        </select>
+      </div>
+
+      {/* Close Status */}
+      <div className="space-y-2">
+        <Label htmlFor="closeStatus" className="font-semibold text-base">
+          Close Status
+        </Label>
+        <select
+          id="closeStatus"
+          name="closeStatus"
+          value={formData.closeStatus}
+          onChange={handleChange}
+          disabled={isSubmitting}
+          className="w-full rounded-lg border border-slate-300 px-4 py-3 text-base focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white cursor-pointer"
+        >
+          <option value="OPEN">🔵 Open</option>
+          <option value="WON">✓ Won</option>
+          <option value="LOST">✗ Lost</option>
+        </select>
       </div>
 
       {/* Notes - Optional, collapsible on mobile */}

@@ -9,6 +9,11 @@ const createLeadSchema = z.object({
   service: z.string().min(1),
   source: z.string().min(1),
   contactName: z.string().optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  estimateAmount: z.number().positive().optional(),
+  estimateStatus: z.enum(['PENDING', 'SCHEDULED', 'COMPLETED', 'NO_SHOW']).default('PENDING'),
+  closeStatus: z.enum(['OPEN', 'WON', 'LOST']).default('OPEN'),
   notes: z.string().optional(),
 });
 
@@ -16,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const validatedData = createLeadSchema.parse(body);
-    const { orgId, service, source, contactName, notes } = validatedData;
+    const { orgId, service, source, contactName, email, phone, estimateAmount, estimateStatus, closeStatus, notes } = validatedData;
 
     const userId = request.headers.get('x-user-id');
     if (!userId) {
@@ -58,11 +63,41 @@ export async function POST(request: NextRequest) {
         service,
         source,
         contactName,
+        email,
+        phone,
+        estimateAmount,
         notes,
-        estimateStatus: 'PENDING',
-        closeStatus: 'OPEN',
+        estimateStatus,
+        closeStatus,
       })
       .returning();
+
+    // Send to webhook if configured
+    if (org[0].webhookUrl) {
+      try {
+        await fetch(org[0].webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadId: newLead[0].id,
+            orgId,
+            service,
+            source,
+            contactName,
+            email,
+            phone,
+            estimateAmount,
+            estimateStatus,
+            closeStatus,
+            notes,
+            createdAt: newLead[0].createdAt,
+          }),
+        });
+      } catch (webhookError) {
+        console.error('Webhook send error:', webhookError);
+        // Don't fail the lead creation if webhook fails
+      }
+    }
 
     return NextResponse.json(
       {
