@@ -14,18 +14,12 @@ export default function OpenLeadsPage() {
       try {
         if (typeof window === 'undefined') return;
 
-        const cookies = document.cookie.split('; ');
-        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-        if (!userIdCookie) {
-          setIsLoading(false);
-          return;
-        }
-
-        const userId = userIdCookie.split('=')[1];
-        const response = await fetch(`/api/user/current?userId=${userId}`);
+        const viewingOrgId = sessionStorage.getItem('viewingOrgId');
+        const url = `/api/me${viewingOrgId ? `?viewingOrgId=${viewingOrgId}` : ''}`;
+        const response = await fetch(url);
         if (response.ok) {
           const data = await response.json();
-          setOrgId(data.currentOrg.id);
+          setOrgId(data.currentOrg?.id || null);
         }
       } catch (error) {
         console.error('Error fetching org:', error);

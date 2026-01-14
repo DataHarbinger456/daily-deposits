@@ -76,10 +76,10 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
 
-    // Set a simple cookie with userId (in production, use secure JWT/session)
+    // Set a secure session cookie with userId
     response.cookies.set('userId', user.id, {
-      httpOnly: false,
-      secure: false, // Set to true in production with HTTPS
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7, // 7 days
     });

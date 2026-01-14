@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Edit2 } from 'lucide-react';
@@ -37,6 +37,35 @@ interface OpenLeadsListProps {
   orgId: string;
 }
 
+// Helper function to get day of week
+function getDayOfWeek(date: Date): string {
+  const days = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  return days[date.getDay()];
+}
+
+// Helper function to group leads by day of week
+function groupByDayOfWeek(leads: Lead[]): Map<string, Lead[]> {
+  const grouped = new Map<string, Lead[]>();
+
+  leads.forEach((lead) => {
+    const date = new Date(lead.createdAt);
+    const dayOfWeek = getDayOfWeek(date);
+
+    if (!grouped.has(dayOfWeek)) {
+      grouped.set(dayOfWeek, []);
+    }
+    grouped.get(dayOfWeek)!.push(lead);
+  });
+
+  return grouped;
+}
+
+// Helper function to get the most recent date for a group
+function getMostRecentDateForDay(leads: Lead[]): Date {
+  if (leads.length === 0) return new Date(0);
+  return new Date(Math.max(...leads.map((l) => new Date(l.createdAt).getTime())));
+}
+
 export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -52,14 +81,14 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get userId from cookie
-        const cookies = document.cookie.split('; ');
-        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-        if (!userIdCookie) {
+        // Get current user from /api/me
+        const meResponse = await fetch('/api/me');
+        if (!meResponse.ok) {
           throw new Error('User not authenticated');
         }
 
-        const id = userIdCookie.split('=')[1];
+        const meData = await meResponse.json();
+        const id = meData.user.id;
         setUserId(id);
 
         // Fetch leads
@@ -103,14 +132,14 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
     newStatus: string
   ) => {
     try {
-      // Get userId from cookie
-      const cookies = document.cookie.split('; ');
-      const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-      if (!userIdCookie) {
+      // Get current user from /api/me
+      const meResponse = await fetch('/api/me');
+      if (!meResponse.ok) {
         throw new Error('User not authenticated');
       }
 
-      const userId = userIdCookie.split('=')[1];
+      const meData = await meResponse.json();
+      const userId = meData.user.id;
       const payload: Record<string, unknown> = { leadId };
 
       if (fieldType === 'closeStatus') {
@@ -129,7 +158,8 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to update lead');
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to update lead (${response.status})`);
       }
 
       // Update lead status in local state
@@ -145,27 +175,51 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
       );
     } catch (err) {
       console.error('Update error:', err);
+      alert(`Error: ${err instanceof Error ? err.message : 'Failed to update lead'}`);
     }
   };
 
   // Get unique sources for filter dropdown
-  const sourcesForFilter = Array.from(new Set(leads.map((l) => l.source)));
+  const sourcesForFilter = useMemo(
+    () => Array.from(new Set(leads.map((l) => l.source))),
+    [leads]
+  );
 
   // Filter and sort leads
-  let filteredLeads = filterSource
-    ? leads.filter((l) => l.source === filterSource)
-    : leads;
+  const filteredLeads = useMemo(() => {
+    let result = filterSource
+      ? leads.filter((l) => l.source === filterSource)
+      : leads;
 
-  if (sortBy === 'oldest') {
-    filteredLeads = [...filteredLeads].reverse();
-  }
+    if (sortBy === 'oldest') {
+      result = [...result].reverse();
+    }
 
-  const stats = {
-    total: leads.length,
-    pending: leads.filter((l) => l.estimateStatus === 'PENDING').length,
-    scheduled: leads.filter((l) => l.estimateStatus === 'SCHEDULED').length,
-    completed: leads.filter((l) => l.estimateStatus === 'COMPLETED').length,
-  };
+    return result;
+  }, [leads, filterSource, sortBy]);
+
+  // Memoize stats calculation
+  const stats = useMemo(
+    () => ({
+      total: leads.length,
+      pending: leads.filter((l) => l.estimateStatus === 'PENDING').length,
+      scheduled: leads.filter((l) => l.estimateStatus === 'SCHEDULED').length,
+      completed: leads.filter((l) => l.estimateStatus === 'COMPLETED').length,
+    }),
+    [leads]
+  );
+
+  // Memoize grouped and sorted leads for table rendering (must be before early returns)
+  const groupedAndSortedLeads = useMemo(() => {
+    if (filteredLeads.length === 0) return [];
+    const grouped = groupByDayOfWeek(filteredLeads);
+    const sortedDays = Array.from(grouped.entries()).sort((a, b) => {
+      const dateA = getMostRecentDateForDay(a[1]);
+      const dateB = getMostRecentDateForDay(b[1]);
+      return dateB.getTime() - dateA.getTime();
+    });
+    return sortedDays;
+  }, [filteredLeads]);
 
   if (isLoading) {
     return (
@@ -333,13 +387,21 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
               </tr>
             </thead>
             <tbody>
-              {filteredLeads.map((lead, index) => (
-                <tr
-                  key={lead.id}
-                  className={`border-b border-slate-200 hover:bg-slate-50 transition-colors ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-slate-50'
-                  }`}
-                >
+              {groupedAndSortedLeads.flatMap(([dayOfWeek, leadsForDay]) => [
+                  // Day separator row
+                  <tr key={`day-${dayOfWeek}`} className="bg-slate-100 hover:bg-slate-100">
+                    <td colSpan={10} className="px-6 py-3">
+                      <p className="text-sm font-bold text-slate-700 uppercase tracking-wide">{dayOfWeek}</p>
+                    </td>
+                  </tr>,
+                  // Lead rows for this day
+                  ...leadsForDay.map((lead, index) => (
+                    <tr
+                      key={lead.id}
+                      className={`border-b border-slate-200 hover:bg-slate-100 transition-colors ${
+                        index % 2 === 0 ? 'bg-white' : 'bg-slate-100'
+                      }`}
+                    >
                   <td className="px-6 py-4 text-sm font-medium text-slate-900">
                     {lead.contactName || 'Unnamed'}
                   </td>
@@ -423,8 +485,9 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
                       <Edit2 className="w-4 h-4" />
                     </button>
                   </td>
-                </tr>
-              ))}
+                    </tr>
+                    )),
+              ])}
             </tbody>
           </table>
         )}
@@ -449,6 +512,9 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
                 l.id === updatedContact.id ? { ...l, ...updatedContact } : l
               )
             );
+          }}
+          onDelete={(deletedLeadId) => {
+            setLeads((prev) => prev.filter((l) => l.id !== deletedLeadId));
           }}
           userId={userId}
         />

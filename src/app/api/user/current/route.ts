@@ -58,10 +58,11 @@ export async function GET(request: NextRequest) {
       if (requestedOrg) {
         currentOrg = requestedOrg;
       }
-    } else if (orgs.length > 0) {
-      // Default to first org
+    } else if (user.userType === 'business_owner' && orgs.length > 0) {
+      // Business owners always have a current org (their single org)
       currentOrg = orgs[0];
     }
+    // Agency users with no viewingOrgId: currentOrg stays null (they're in agency view)
 
     return NextResponse.json({
       user: {

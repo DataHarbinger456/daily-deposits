@@ -107,11 +107,14 @@ export async function POST(request: NextRequest) {
 
     // Create leads
     let createdCount = 0;
+    const now = new Date();
     for (const leadData of sampleLeads) {
       await db.insert(leadsTable).values({
         id: generateIdFromEntropySize(16),
         orgId: DEMO_ORG_ID,
         ...leadData,
+        createdAt: now,
+        updatedAt: now,
       });
       createdCount++;
     }

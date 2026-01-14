@@ -27,6 +27,7 @@ interface ContactDetailModalProps {
   sources: Array<{ id: string; name: string }>;
   onClose: () => void;
   onSave: (updatedContact: Contact) => void;
+  onDelete?: (leadId: string) => void;
   userId: string;
 }
 
@@ -36,10 +37,12 @@ export function ContactDetailModal({
   sources,
   onClose,
   onSave,
+  onDelete,
   userId,
 }: ContactDetailModalProps) {
   const [formData, setFormData] = useState(contact);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleChange = (
@@ -112,6 +115,42 @@ export function ContactDetailModal({
       setError(errorMessage);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!window.confirm('Are you sure you want to delete this contact? This cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/leads/delete', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': userId,
+        },
+        body: JSON.stringify({ leadId: contact.id }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to delete contact');
+      }
+
+      if (onDelete) {
+        onDelete(contact.id);
+      }
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete contact';
+      console.error('Delete error:', errorMessage);
+      setError(errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -322,21 +361,31 @@ export function ContactDetailModal({
         </div>
 
         {/* Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-slate-200 p-6 flex gap-3 justify-end">
+        <div className="sticky bottom-0 bg-white border-t border-slate-200 p-6 flex gap-3 justify-between">
           <Button
+            onClick={handleDelete}
+            disabled={isSaving || isDeleting}
             variant="outline"
-            onClick={onClose}
-            disabled={isSaving}
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
           >
-            Cancel
+            {isDeleting ? 'Deleting...' : '🗑️ Delete Contact'}
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            {isSaving ? 'Saving...' : '✓ Save Changes'}
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={onClose}
+              disabled={isSaving || isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving || isDeleting}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isSaving ? 'Saving...' : '✓ Save Changes'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

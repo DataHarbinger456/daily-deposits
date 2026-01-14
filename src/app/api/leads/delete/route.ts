@@ -3,19 +3,15 @@ import { z } from 'zod';
 import { getDb, leadsTable, orgsTable } from '@/lib/db';
 import { eq } from 'drizzle-orm';
 
-const updateStatusSchema = z.object({
+const deleteLeadSchema = z.object({
   leadId: z.string().min(1),
-  closeStatus: z.enum(['OPEN', 'WON', 'LOST']).optional(),
-  estimateStatus: z
-    .enum(['PENDING', 'SCHEDULED', 'COMPLETED', 'NO_SHOW'])
-    .optional(),
 });
 
-export async function PATCH(request: NextRequest) {
+export async function DELETE(request: NextRequest) {
   try {
     const body = await request.json();
-    const validatedData = updateStatusSchema.parse(body);
-    const { leadId, closeStatus, estimateStatus } = validatedData;
+    const validatedData = deleteLeadSchema.parse(body);
+    const { leadId } = validatedData;
 
     const userId = request.headers.get('x-user-id');
     if (!userId) {
@@ -63,35 +59,14 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Validation: closeStatus can only be WON/LOST if estimateStatus is COMPLETED or NO_SHOW
-    const newEstimateStatus = estimateStatus || lead.estimateStatus;
-    const newCloseStatus = closeStatus || lead.closeStatus;
-
-    if (
-      (newCloseStatus === 'WON' || newCloseStatus === 'LOST') &&
-      (newEstimateStatus === 'PENDING' || newEstimateStatus === 'SCHEDULED')
-    ) {
-      return NextResponse.json(
-        { error: 'Cannot mark as won/lost until estimate is completed or no-showed' },
-        { status: 400 }
-      );
-    }
-
-    // Update lead
-    const updateData: Record<string, unknown> = {};
-    if (closeStatus) updateData.closeStatus = closeStatus;
-    if (estimateStatus) updateData.estimateStatus = estimateStatus;
-    updateData.updatedAt = new Date();
-
-    const updatedLead = await db
-      .update(leadsTable)
-      .set(updateData)
-      .where(eq(leadsTable.id, leadId))
-      .returning();
+    // Delete lead
+    await db
+      .delete(leadsTable)
+      .where(eq(leadsTable.id, leadId));
 
     return NextResponse.json({
-      message: 'Lead updated successfully',
-      lead: updatedLead[0],
+      message: 'Lead deleted successfully',
+      leadId,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -101,7 +76,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    console.error('Lead update error:', error);
+    console.error('Lead delete error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

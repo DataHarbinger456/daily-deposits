@@ -25,14 +25,6 @@ export const usersTableSqlite = sqliteTable('users', {
     .notNull(),
 });
 
-export const sessionsTableSqlite = sqliteTable('sessions', {
-  id: text('id').primaryKey(),
-  userId: text('user_id')
-    .notNull()
-    .references(() => usersTableSqlite.id, { onDelete: 'cascade' }),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-});
-
 export const orgsTableSqlite = sqliteTable('orgs', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
@@ -113,14 +105,6 @@ export const usersTablePostgres = pgTable('users', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
-export const sessionsTablePostgres = pgTable('sessions', {
-  id: varchar('id', { length: 255 }).primaryKey(),
-  userId: varchar('user_id', { length: 255 })
-    .notNull()
-    .references(() => usersTablePostgres.id, { onDelete: 'cascade' }),
-  expiresAt: timestamp('expires_at').notNull(),
-});
-
 export const orgsTablePostgres = pgTable('orgs', {
   id: varchar('id', { length: 255 }).primaryKey(),
   name: varchar('name', { length: 255 }).notNull(),
@@ -178,7 +162,6 @@ export const leadsTablePostgres = pgTable('leads', {
 // ============================================
 
 export const usersTable = isProduction ? usersTablePostgres : usersTableSqlite;
-export const sessionsTable = isProduction ? sessionsTablePostgres : sessionsTableSqlite;
 export const orgsTable = isProduction ? orgsTablePostgres : orgsTableSqlite;
 export const servicesTable = isProduction ? servicesTablePostgres : servicesTableSqlite;
 export const sourcesTable = isProduction ? sourcesTablePostgres : sourcesTableSqlite;
@@ -190,8 +173,6 @@ export const leadsTable = isProduction ? leadsTablePostgres : leadsTableSqlite;
 
 export type User = typeof usersTable.$inferSelect;
 export type NewUser = typeof usersTable.$inferInsert;
-export type Session = typeof sessionsTable.$inferSelect;
-export type NewSession = typeof sessionsTable.$inferInsert;
 export type Org = typeof orgsTable.$inferSelect;
 export type NewOrg = typeof orgsTable.$inferInsert;
 export type Service = typeof servicesTable.$inferSelect;

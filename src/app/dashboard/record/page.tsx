@@ -13,18 +13,9 @@ export default function RecordLeadPage() {
       try {
         if (typeof window === 'undefined') return;
 
-        const cookies = document.cookie.split('; ');
-        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-        if (!userIdCookie) {
-          setError('Not authenticated. Please log in.');
-          setIsLoading(false);
-          return;
-        }
-
-        const userId = userIdCookie.split('=')[1];
-        console.log('Fetching user data for:', userId);
-
-        const response = await fetch(`/api/user/current?userId=${userId}`, {
+        const viewingOrgId = sessionStorage.getItem('viewingOrgId');
+        const url = `/api/me${viewingOrgId ? `?viewingOrgId=${viewingOrgId}` : ''}`;
+        const response = await fetch(url, {
           credentials: 'include',
         });
         if (!response.ok) {
@@ -32,8 +23,7 @@ export default function RecordLeadPage() {
         }
 
         const data = await response.json();
-        console.log('User data:', data);
-        setOrgId(data.currentOrg.id);
+        setOrgId(data.currentOrg?.id || null);
         setIsLoading(false);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Unknown error';

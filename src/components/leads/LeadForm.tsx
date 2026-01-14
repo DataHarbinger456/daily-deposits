@@ -51,14 +51,14 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
           return;
         }
 
-        // Get userId from cookie
-        const cookies = document.cookie.split('; ');
-        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-        if (!userIdCookie) {
+        // Get userId from /api/me
+        const meResponse = await fetch('/api/me');
+        if (!meResponse.ok) {
           throw new Error('User not authenticated');
         }
+        const meData = await meResponse.json();
+        const userId = meData.user.id;
 
-        const userId = userIdCookie.split('=')[1];
         const response = await fetch(`/api/org/get?orgId=${orgId}`, {
           headers: { 'x-user-id': userId },
         });
@@ -99,14 +99,13 @@ export function LeadForm({ orgId, onSuccess }: LeadFormProps) {
     setSuccessMessage(null);
 
     try {
-      // Get userId from cookie
-      const cookies = document.cookie.split('; ');
-      const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-      if (!userIdCookie) {
+      // Get userId from /api/me
+      const meResponse = await fetch('/api/me');
+      if (!meResponse.ok) {
         throw new Error('User not authenticated');
       }
-
-      const userId = userIdCookie.split('=')[1];
+      const meData = await meResponse.json();
+      const userId = meData.user.id;
       const response = await fetch('/api/leads/create', {
         method: 'POST',
         headers: {

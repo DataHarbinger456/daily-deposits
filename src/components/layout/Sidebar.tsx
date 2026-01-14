@@ -24,20 +24,18 @@ export function Sidebar({ isViewingAgency: initialIsAgency = false }: SidebarPro
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [viewingOrgId, setViewingOrgId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
         if (typeof window === 'undefined') return;
 
-        const cookies = document.cookie.split('; ');
-        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-        if (!userIdCookie) {
-          return;
-        }
+        // Check viewing mode from session storage
+        const orgIdFromSession = sessionStorage.getItem('viewingOrgId');
+        setViewingOrgId(orgIdFromSession);
 
-        const userId = userIdCookie.split('=')[1];
-        const response = await fetch(`/api/user/current?userId=${userId}`);
+        const response = await fetch('/api/me');
         if (response.ok) {
           const data = await response.json();
           setUser(data.user);
@@ -52,8 +50,8 @@ export function Sidebar({ isViewingAgency: initialIsAgency = false }: SidebarPro
 
   const toggleSidebar = () => setIsOpen(!isOpen);
 
-  // Determine if viewing agency mode
-  const isViewingAgency = user?.userType === 'agency' || initialIsAgency;
+  // Determine if viewing agency mode: agency user type BUT not viewing a specific org
+  const isViewingAgency = (user?.userType === 'agency' || initialIsAgency) && !viewingOrgId;
 
   // Agency users viewing agency mode - show different menu
   const agencyNavItems = [

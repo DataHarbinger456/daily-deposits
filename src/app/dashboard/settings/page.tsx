@@ -28,15 +28,9 @@ export default function SettingsPage() {
         return;
       }
 
-      // Get userId from cookie
-      const cookies = document.cookie.split('; ');
-      const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-      if (!userIdCookie) {
-        throw new Error('User not authenticated');
-      }
-
-      const userId = userIdCookie.split('=')[1];
-      const userResponse = await fetch(`/api/user/current?userId=${userId}`);
+      const viewingOrgId = sessionStorage.getItem('viewingOrgId');
+      const meUrl = `/api/me${viewingOrgId ? `?viewingOrgId=${viewingOrgId}` : ''}`;
+      const userResponse = await fetch(meUrl);
 
       if (!userResponse.ok) {
         throw new Error('Failed to fetch user data');
@@ -44,6 +38,7 @@ export default function SettingsPage() {
 
       const userData = await userResponse.json();
       const orgId = userData.currentOrg?.id;
+      const userId = userData.user.id;
 
       if (!orgId) {
         throw new Error('No organization found');

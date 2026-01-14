@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
@@ -19,6 +20,7 @@ interface DashboardMetrics {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<DashboardMetrics | null>(null);
@@ -28,23 +30,30 @@ export default function DashboardPage() {
       try {
         if (typeof window === 'undefined') return;
 
-        const cookies = document.cookie.split('; ');
-        const userIdCookie = cookies.find((c) => c.startsWith('userId='));
-        if (!userIdCookie) {
-          setError('User not authenticated');
-          return;
-        }
+        const viewingOrgId = sessionStorage.getItem('viewingOrgId');
 
-        const userId = userIdCookie.split('=')[1];
-
-        // Get current org
-        const userResponse = await fetch(`/api/user/current?userId=${userId}`);
+        // Get current user from /api/me
+        const userUrl = `/api/me${viewingOrgId ? `?viewingOrgId=${viewingOrgId}` : ''}`;
+        const userResponse = await fetch(userUrl);
         if (!userResponse.ok) {
           throw new Error('Failed to fetch user data');
         }
 
         const userData = await userResponse.json();
+
+        // Agency users should go to /dashboard/agency unless explicitly viewing a sub-account
+        if (userData.isAgency && !viewingOrgId) {
+          router.push('/dashboard/agency');
+          return;
+        }
+
+        if (!userData.currentOrg) {
+          setError('No organization found');
+          return;
+        }
+
         const orgId = userData.currentOrg.id;
+        const userId = userData.user.id;
 
         // Fetch metrics
         const metricsResponse = await fetch(
@@ -64,7 +73,7 @@ export default function DashboardPage() {
     };
 
     fetchMetrics();
-  }, []);
+  }, [router]);
 
   if (isLoading) {
     return (

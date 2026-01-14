@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     // Create lead
     const leadId = generateIdFromEntropySize(16);
+    const now = new Date();
     const newLead = await db
       .insert(leadsTable)
       .values({
@@ -69,8 +70,17 @@ export async function POST(request: NextRequest) {
         notes,
         estimateStatus,
         closeStatus,
+        createdAt: now,
+        updatedAt: now,
       })
       .returning();
+
+    if (!newLead || newLead.length === 0) {
+      return NextResponse.json(
+        { error: 'Failed to create lead' },
+        { status: 500 }
+      );
+    }
 
     // Send to webhook if configured
     if (org[0].webhookUrl) {
