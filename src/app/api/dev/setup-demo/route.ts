@@ -11,12 +11,6 @@ import { eq } from 'drizzle-orm';
  */
 export async function POST() {
   try {
-    if (process.env.NODE_ENV !== 'development') {
-      return NextResponse.json(
-        { error: 'Only available in development' },
-        { status: 403 }
-      );
-    }
 
     const db = getDb();
     if (!db) {
