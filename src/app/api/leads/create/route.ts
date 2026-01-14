@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getDb, leadsTable, orgsTable } from '@/lib/db';
 import { generateIdFromEntropySize } from 'lucia';
 import { eq } from 'drizzle-orm';
+import { serializeLeadTags } from '@/lib/tags';
 
 const createLeadSchema = z.object({
   orgId: z.string().min(1),
@@ -53,6 +54,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Build tags array from org's companyTag
+    const tags: string[] = [];
+    if (org[0].companyTag) {
+      tags.push(org[0].companyTag);
+    }
+
     // Create lead
     const leadId = generateIdFromEntropySize(16);
     const now = new Date();
@@ -70,6 +77,7 @@ export async function POST(request: NextRequest) {
         notes,
         estimateStatus,
         closeStatus,
+        tags: serializeLeadTags(tags),
         createdAt: now,
         updatedAt: now,
       })
@@ -100,6 +108,7 @@ export async function POST(request: NextRequest) {
             estimateStatus,
             closeStatus,
             notes,
+            tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
             createdAt: newLead[0].createdAt,
           }),
         });

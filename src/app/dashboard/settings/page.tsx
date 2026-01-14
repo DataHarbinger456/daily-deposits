@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { ServicesList } from '@/components/org/ServicesList';
 import { SourcesList } from '@/components/org/SourcesList';
 import { WebhookSettings } from '@/components/org/WebhookSettings';
+import { CompanyTagSettings } from '@/components/org/CompanyTagSettings';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,6 +13,7 @@ interface OrgData {
   name: string;
   userId: string;
   webhookUrl?: string;
+  companyTag?: string;
   services: Array<{ id: string; name: string; orgId: string }>;
   sources: Array<{ id: string; name: string; orgId: string }>;
 }
@@ -121,6 +123,15 @@ export default function SettingsPage() {
           orgId={orgData.id}
           userId={orgData.userId}
           initialWebhookUrl={orgData.webhookUrl}
+          onSuccess={fetchOrgData}
+        />
+      </Card>
+
+      <Card className="p-6 mt-6">
+        <CompanyTagSettings
+          orgId={orgData.id}
+          userId={orgData.userId}
+          initialCompanyTag={orgData.companyTag}
           onSuccess={fetchOrgData}
         />
       </Card>
