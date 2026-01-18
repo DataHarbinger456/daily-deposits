@@ -105,6 +105,22 @@ export default function DashboardPage() {
         <p className="text-slate-600 mt-2">Track your leads and revenue performance</p>
       </div>
 
+      {/* Quick Actions */}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Link href="/dashboard/record">
+            <Button size="lg" className="w-full justify-start">
+              ➕ Record New Lead
+            </Button>
+          </Link>
+          <Link href="/dashboard/leads">
+            <Button size="lg" variant="outline" className="w-full justify-start">
+              📋 View All Contacts
+            </Button>
+          </Link>
+        </div>
+      </div>
+
       {/* Key Metrics Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Total Revenue */}
@@ -217,23 +233,6 @@ export default function DashboardPage() {
                 </div>
               ))
           )}
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold text-slate-900">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Link href="/dashboard/record">
-            <Button size="lg" className="w-full justify-start">
-              ➕ Record New Lead
-            </Button>
-          </Link>
-          <Link href="/dashboard/leads">
-            <Button size="lg" variant="outline" className="w-full justify-start">
-              📋 View All Contacts
-            </Button>
-          </Link>
         </div>
       </div>
     </div>
