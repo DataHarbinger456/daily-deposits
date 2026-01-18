@@ -60,12 +60,15 @@ public/                           # Static assets
 - **Framework**: Next.js 15 (App Router)
 - **Language**: TypeScript (strict mode)
 - **UI Library**: shadcn/ui + Radix UI + Tailwind CSS 4
-- **Auth**: Auth.js (NextAuth) with email/password
-- **Database**: SQLite (local) → PostgreSQL (production)
+- **Auth**: Session-based with email/password
+- **Database**:
+  - Local: SQLite (dev)
+  - Production: PostgreSQL via Supabase with pooling
 - **ORM**: Drizzle ORM
 - **Forms**: React Hook Form + Zod validation
 - **Package Manager**: npm
 - **Styling**: Tailwind CSS 4 + PostCSS
+- **Integrations**: GoHighLevel (CRM sync), Webhooks
 
 ## Code Quality - Zero Tolerance
 
@@ -116,44 +119,85 @@ npm run test              # Run tests (when configured)
 ## Features Implemented
 
 ✅ Landing page with hero section
-✅ Authentication pages (login/signup)
-✅ Dashboard layout with sidebar navigation
-✅ User registration API
-✅ Database schema (SQLite/PostgreSQL ready)
-✅ shadcn/ui component library
+✅ User signup/login (session-based)
+✅ Dashboard with sidebar navigation
+✅ Multi-tenant organization management
+✅ Lead/contact management (CRUD)
+✅ Lead filtering (status, source)
+✅ Auto-generated company tags (from org name)
+✅ GoHighLevel integration with auto-sync
+✅ Custom field mapping to GHL (AC Guys)
+✅ Webhook support for external integrations
+✅ Supabase PostgreSQL with connection pooling
+✅ SQLite for local development
 ✅ TypeScript strict mode
 ✅ Responsive design (mobile-first)
 
+## Integrations
+
+### GoHighLevel (AC Guys)
+- **Auto-sync**: Leads automatically sync to GHL on creation
+- **Field Mapping**:
+  - Service → `contact.tracker_service`
+  - Source → `contact.tracker_source`
+  - Estimate Amount → `contact.tracker_revenue`
+  - Estimate Status → `contact.tracker_estimatestatus`
+  - Close Status → `contact.tracker_closestatus`
+  - Company Tag → Sent as contact tag
+- **Upsert Logic**: Creates new contact if email doesn't exist, updates if exists
+- **Non-blocking**: GHL sync failures don't prevent lead creation
+
 ## Next Steps
 
-- Integrate Auth.js for session management
-- Create deposit recording UI/API
-- Add analytics/charts
-- Design refinements from Dribbble/21st.dev/Coconut UI
-- Implement reports and exports
-- Multi-tenant data isolation
+- Create Supabase SQL views by company tag
+- Enable CSV export from views
+- Add contact detail editing
+- Implement lead status workflows
+- Add bulk actions
 - Testing setup (Vitest)
 
 ## Environment Variables
 
-Create `.env.local`:
+Create `.env.local` (local dev):
 
 ```
-# Database
-DATABASE_URL=sqlite:///dev.db  # SQLite for local dev
-# DATABASE_URL=postgresql://...  # PostgreSQL for production
+# Database - SQLite for local development
+# DATABASE_URL=postgresql://...  # Uncomment to use Supabase locally
+
+# Supabase (production via Vercel)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# GoHighLevel Integration
+GHL_LOCATION_ID=your-location-id
+GHL_PRIVATE_INTEGRATION_TOKEN=your-private-token
+GHL_BASE_URL=https://services.leadconnectorhq.com
+GHL_API_VERSION=2021-07-28
 
 # Auth
 NEXTAUTH_SECRET=your-secret-key
 NEXTAUTH_URL=http://localhost:3000
+
+# Environment
+NODE_ENV=development
 ```
+
+### Production (Vercel)
+
+Set these environment variables in Vercel dashboard:
+- `DATABASE_URL` - Supabase PostgreSQL pooling connection string
+- `GHL_*` - GoHighLevel credentials
+- `NEXTAUTH_SECRET` - Production secret key
+- `NEXTAUTH_URL` - Production domain
 
 ## Deployment Notes
 
-- Production uses PostgreSQL (set DATABASE_URL)
-- Auth session stored in database
-- Static assets deployed to CDN
-- Build output: `.next/`
+- **Local**: Uses SQLite (auto-initialized at `/api/dev/init-db`)
+- **Production**: Uses Supabase PostgreSQL with connection pooling
+- **Deployment**: Via Vercel with automatic HTTPS
+- **Build output**: `.next/`
+- **Database**: Auto-migrates schema on deploy
 
 ## Code Quality Checklist
 

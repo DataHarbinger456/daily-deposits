@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Daily Deposits
 
-## Getting Started
+A multi-tenant SaaS CRM for tracking and managing leads with automatic sync to GoHighLevel.
 
-First, run the development server:
+**Live**: https://daily-deposits-gilt.vercel.app
+
+## Features
+
+- **Multi-tenant**: Organizations with company tags
+- **Lead Management**: Create, view, filter contacts
+- **Auto-sync to GHL**: Leads automatically sync to GoHighLevel with custom fields
+- **Supabase PostgreSQL**: Production database with connection pooling
+- **SQLite Local Dev**: Zero-setup local development
+- **Webhook Support**: Send lead data to external systems
+
+## Quick Start
+
+### Local Development
 
 ```bash
+# Install dependencies
+npm install
+
+# Start dev server (uses SQLite)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# Open http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Production Deployment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Deployed on Vercel with Supabase PostgreSQL. Set environment variables in Vercel dashboard:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+DATABASE_URL=postgresql://...  # Supabase pooling connection
+GHL_LOCATION_ID=...
+GHL_PRIVATE_INTEGRATION_TOKEN=...
+NEXTAUTH_SECRET=...
+NEXTAUTH_URL=https://your-domain.com
+```
 
-## Learn More
+## Project Structure
 
-To learn more about Next.js, take a look at the following resources:
+See [CLAUDE.md](./CLAUDE.md) for detailed documentation.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+├── app/api/           # API endpoints
+│   ├── auth/          # Login/signup
+│   ├── leads/         # Lead CRUD + GHL sync
+│   └── org/           # Organization management
+├── components/        # React components
+├── lib/               # Utilities & database
+│   ├── db/            # Drizzle ORM schema
+│   └── ghl-client.ts  # GoHighLevel integration
+└── types/             # TypeScript definitions
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Key Files
 
-## Deploy on Vercel
+- **Lead Creation**: `src/app/api/leads/create/route.ts` - Creates lead + Supabase + GHL sync
+- **GHL Integration**: `src/lib/ghl-client.ts` - GoHighLevel API client
+- **Database**: `src/lib/db/schema.ts` - Drizzle schema
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Local (.env.local)
+- Uses SQLite by default
+- Optional: Set `DATABASE_URL` for Supabase testing
+
+### Production (Vercel)
+- **Database**: Supabase PostgreSQL with connection pooling
+- **Region**: AWS (configurable)
+- **Auth**: Session-based (7-day cookie)
+
+## Code Quality
+
+```bash
+npm run lint        # ESLint
+npm run typecheck   # TypeScript check
+npm run build       # Production build
+```
+
+All must pass before committing.
+
+## Testing
+
+Create test lead:
+1. Sign up at https://daily-deposits-gilt.vercel.app/signup
+2. Create lead in Contacts
+3. Verify in Supabase dashboard
+4. Verify in GoHighLevel account
+
+## API Endpoints
+
+- `POST /api/auth/signup` - User registration
+- `POST /api/auth/login` - User login
+- `POST /api/leads/create` - Create lead (+ auto-sync to GHL)
+- `GET /api/leads/list` - List leads
+- `POST /api/leads/update-status` - Update lead status
+- `GET /api/org/get` - Get organization
+
+## Technology
+
+- **Frontend**: Next.js 15, React 19, TypeScript
+- **Backend**: Next.js API Routes
+- **Database**: Supabase PostgreSQL (Drizzle ORM)
+- **Auth**: Session-based (email/password)
+- **Styling**: Tailwind CSS 4, shadcn/ui
+- **Integrations**: GoHighLevel CRM
+
+## License
+
+MIT
