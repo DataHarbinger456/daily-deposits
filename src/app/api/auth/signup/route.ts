@@ -65,11 +65,14 @@ export async function POST(request: NextRequest) {
     // Create default organization for the user
     const orgId = generateIdFromEntropySize(16);
     const orgName = companyName;
+    // Auto-generate company tag from organization name (lowercase, replace spaces with hyphens)
+    const companyTag = orgName.toLowerCase().replace(/\s+/g, '-');
 
     await db.insert(orgsTable).values({
       id: orgId,
       name: orgName,
       userId: newUser[0].id,
+      companyTag,
     });
 
     // Get industry template and create services/sources
