@@ -7,6 +7,13 @@ export interface GHLContact {
   customFields?: Array<{ id: string; value: string }>;
 }
 
+/**
+ * Generate a placeholder email for contacts without email
+ */
+export function generatePlaceholderEmail(identifier: string): string {
+  return `${identifier}@noemail.com`;
+}
+
 // AC Guys custom field IDs
 export const AC_GUYS_FIELDS = {
   service: 'oWWbiexTnc7Idvz43JQJ',           // contact.tracker_service
@@ -131,24 +138,32 @@ export class GHLClient {
   /**
    * Upsert contact (create if new, update if exists)
    * Uses email as the unique identifier
+   * If no email provided, generates a placeholder email
    */
   async upsertContact(
-    contactData: GHLContact
+    contactData: GHLContact,
+    identifier?: string
   ): Promise<{ contact: GHLResponse; action: 'created' | 'updated' }> {
-    if (!contactData.email) {
-      throw new Error('Email is required for upsert operation');
+    // Use provided email or generate placeholder
+    const email = contactData.email || (identifier ? generatePlaceholderEmail(identifier) : undefined);
+
+    if (!email) {
+      throw new Error('Email or identifier is required for upsert operation');
     }
 
+    // Ensure email is set in contactData
+    const contactDataWithEmail = { ...contactData, email };
+
     // Check if contact exists
-    const existingContact = await this.findContactByEmail(contactData.email);
+    const existingContact = await this.findContactByEmail(email);
 
     if (existingContact) {
       // Update existing contact
-      const updated = await this.updateContact(existingContact.id as string, contactData);
+      const updated = await this.updateContact(existingContact.id as string, contactDataWithEmail);
       return { contact: updated, action: 'updated' };
     } else {
       // Create new contact
-      const created = await this.createContact(contactData);
+      const created = await this.createContact(contactDataWithEmail);
       return { contact: created, action: 'created' };
     }
   }

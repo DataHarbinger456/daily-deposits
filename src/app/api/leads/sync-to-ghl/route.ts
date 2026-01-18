@@ -43,7 +43,8 @@ export async function POST(request: NextRequest) {
       tags: parseLeadTags(lead.tags),
     };
 
-    const result = await ghlClient.upsertContact(ghlContactData);
+    // Use lead ID as identifier for placeholder email if no email provided
+    const result = await ghlClient.upsertContact(ghlContactData, lead.id);
 
     return NextResponse.json({
       message: `Contact ${result.action} in GHL`,

@@ -151,7 +151,8 @@ export async function POST(request: NextRequest) {
         customFields: customFields.length > 0 ? customFields : undefined,
       };
 
-      const result = await ghlClient.upsertContact(ghlContactData);
+      // Use lead ID as identifier for placeholder email if no email provided
+      const result = await ghlClient.upsertContact(ghlContactData, leadId);
       console.log(`✅ GHL sync: ${result.action} contact ${result.contact.id}`);
     } catch (ghlError) {
       console.error('❌ GHL sync error:', ghlError);
