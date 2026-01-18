@@ -120,8 +120,27 @@ export async function POST(request: NextRequest) {
 
     // Sync to GoHighLevel (AC Guys)
     try {
-      const { GHLClient } = await import('@/lib/ghl-client');
+      const { GHLClient, AC_GUYS_FIELDS } = await import('@/lib/ghl-client');
       const ghlClient = new GHLClient();
+
+      // Build custom fields for AC Guys
+      const customFields: Array<{ id: string; value: string }> = [];
+
+      if (service) {
+        customFields.push({ id: AC_GUYS_FIELDS.service, value: service });
+      }
+      if (source) {
+        customFields.push({ id: AC_GUYS_FIELDS.source, value: source });
+      }
+      if (estimateAmount) {
+        customFields.push({ id: AC_GUYS_FIELDS.estimateAmount, value: estimateAmount.toString() });
+      }
+      if (estimateStatus) {
+        customFields.push({ id: AC_GUYS_FIELDS.estimateStatus, value: estimateStatus });
+      }
+      if (closeStatus) {
+        customFields.push({ id: AC_GUYS_FIELDS.closeStatus, value: closeStatus });
+      }
 
       const ghlContactData = {
         firstName: contactName?.split(' ')[0],
@@ -129,6 +148,7 @@ export async function POST(request: NextRequest) {
         email: email || undefined,
         phone: phone || undefined,
         tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
+        customFields: customFields.length > 0 ? customFields : undefined,
       };
 
       const result = await ghlClient.upsertContact(ghlContactData);

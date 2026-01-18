@@ -7,6 +7,15 @@ export interface GHLContact {
   customFields?: Array<{ id: string; value: string }>;
 }
 
+// AC Guys custom field IDs
+export const AC_GUYS_FIELDS = {
+  service: 'oWWbiexTnc7Idvz43JQJ',           // contact.tracker_service
+  source: 'V59A4IBugpb6vIgniC92',            // contact.tracker_source
+  estimateAmount: 'DsCEwLoSGTbo9WlnYtZV',    // contact.tracker_revenue
+  estimateStatus: 'JH4BpNqwmRVjaHqNY7iP',    // contact.tracker_estimatestatus
+  closeStatus: 'OoXqdPK7TOCUIil6icQh',       // contact.tracker_closestatus
+};
+
 interface GHLClientConfig {
   locationId: string;
   privateIntegrationToken: string;
