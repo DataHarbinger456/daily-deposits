@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Edit2 } from 'lucide-react';
+import { Edit2, Download } from 'lucide-react';
 import { ContactDetailModal } from './ContactDetailModal';
 
 interface Lead {
@@ -77,6 +77,7 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [selectedContact, setSelectedContact] = useState<Lead | null>(null);
   const [userId, setUserId] = useState<string>('');
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -176,6 +177,34 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
     } catch (err) {
       console.error('Update error:', err);
       alert(`Error: ${err instanceof Error ? err.message : 'Failed to update lead'}`);
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    try {
+      setIsDownloading(true);
+      const response = await fetch(`/api/export/leads-csv?orgId=${orgId}`, {
+        headers: { 'x-user-id': userId },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download CSV');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `leads-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert(`Error: ${err instanceof Error ? err.message : 'Failed to download CSV'}`);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -294,27 +323,39 @@ export function OpenLeadsList({ orgId }: OpenLeadsListProps) {
             </select>
           </div>
 
-          <div className="flex gap-2 text-sm">
-            <span className="font-semibold text-slate-700">Sort:</span>
+          <div className="flex gap-2 items-center">
+            <div className="flex gap-2 text-sm">
+              <span className="font-semibold text-slate-700">Sort:</span>
+              <button
+                onClick={() => setSortBy('newest')}
+                className={`px-3 py-1 rounded ${
+                  sortBy === 'newest'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Newest
+              </button>
+              <button
+                onClick={() => setSortBy('oldest')}
+                className={`px-3 py-1 rounded ${
+                  sortBy === 'oldest'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Oldest
+              </button>
+            </div>
+
             <button
-              onClick={() => setSortBy('newest')}
-              className={`px-3 py-1 rounded ${
-                sortBy === 'newest'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
-              }`}
+              onClick={handleDownloadCSV}
+              disabled={isDownloading}
+              className="flex items-center gap-2 px-3 py-1.5 rounded bg-green-600 text-white text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title="Download all leads as CSV"
             >
-              Newest
-            </button>
-            <button
-              onClick={() => setSortBy('oldest')}
-              className={`px-3 py-1 rounded ${
-                sortBy === 'oldest'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Oldest
+              <Download className="w-4 h-4" />
+              {isDownloading ? 'Downloading...' : 'Download CSV'}
             </button>
           </div>
         </div>
