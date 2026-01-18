@@ -147,13 +147,37 @@ npm run test              # Run tests (when configured)
 - **Upsert Logic**: Creates new contact if email doesn't exist, updates if exists
 - **Non-blocking**: GHL sync failures don't prevent lead creation
 
+## Supabase Views (CSV Export)
+
+Four SQL views created for easy data export:
+
+1. **`leads_with_company`** - All leads with org info (main export)
+   - Columns: Contact Name, Email, Phone, Service, Source, Amount, Status, Company, Tags, Date
+   - Use for: General reporting, data analysis
+
+2. **`leads_summary_by_company`** - Summary stats by company tag
+   - Columns: Company Tag, Total Leads, Won Count, Lost Count, Open Count, Revenue
+   - Use for: KPIs, company performance tracking
+
+3. **`open_leads_export`** - Open leads only (formatted)
+   - Columns: Contact Name, Email, Phone, Service, Source, Company
+   - Use for: Follow-up lists, active pipeline
+
+4. **`won_leads_export`** - Won deals (revenue tracking)
+   - Columns: Contact Name, Email, Phone, Service, Company, Amount, Date
+   - Use for: Revenue reports, success tracking
+
+**To export:**
+- Supabase → Table Editor → Select view
+- Click **Download** button
+- Opens as CSV in Excel/Google Sheets
+
 ## Next Steps
 
-- Create Supabase SQL views by company tag
-- Enable CSV export from views
-- Add contact detail editing
-- Implement lead status workflows
-- Add bulk actions
+- Add contact detail editing UI
+- Implement lead status update workflows
+- Add bulk actions (bulk tag, bulk status update)
+- Create API endpoint for view exports
 - Testing setup (Vitest)
 
 ## Environment Variables
