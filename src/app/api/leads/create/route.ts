@@ -118,6 +118,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Sync to GoHighLevel (AC Guys)
+    try {
+      const { GHLClient } = await import('@/lib/ghl-client');
+      const ghlClient = new GHLClient();
+
+      const ghlContactData = {
+        firstName: contactName?.split(' ')[0],
+        lastName: contactName?.split(' ').slice(1).join(' ') || undefined,
+        email: email || undefined,
+        phone: phone || undefined,
+        tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
+      };
+
+      const result = await ghlClient.upsertContact(ghlContactData);
+      console.log(`✅ GHL sync: ${result.action} contact ${result.contact.id}`);
+    } catch (ghlError) {
+      console.error('❌ GHL sync error:', ghlError);
+      // Don't fail the lead creation if GHL sync fails
+    }
+
     return NextResponse.json(
       {
         message: 'Lead created successfully',
