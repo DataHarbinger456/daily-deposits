@@ -28,6 +28,7 @@ export async function POST() {
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
         name TEXT,
+        company_name TEXT,
         user_type TEXT NOT NULL DEFAULT 'business_owner',
         industry TEXT DEFAULT 'general',
         created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -52,6 +53,7 @@ export async function POST() {
         name TEXT NOT NULL,
         user_id TEXT NOT NULL,
         webhook_url TEXT,
+        company_tag TEXT,
         created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -95,6 +97,7 @@ export async function POST() {
         estimate_amount REAL,
         revenue REAL,
         notes TEXT,
+        tags TEXT,
         created_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at INTEGER NOT NULL DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(org_id) REFERENCES orgs(id) ON DELETE CASCADE
