@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       .where(eq(sourcesTable.orgId, orgId));
 
     return NextResponse.json({
-      ...org[0],
+      org: org[0],
       services,
       sources,
     });

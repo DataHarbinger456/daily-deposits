@@ -57,7 +57,7 @@ export default function SettingsPage() {
       }
 
       const data = await response.json();
-      setOrgData(data);
+      setOrgData({ ...data.org, services: data.services, sources: data.sources });
     } catch (error) {
       toast({
         title: 'Error',

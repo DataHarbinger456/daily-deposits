@@ -28,7 +28,7 @@ export default function SubaccountSettingsPage() {
       const response = await fetch(`/api/org/get?orgId=${orgId}&userId=${DEMO_USER_ID}`);
       if (response.ok) {
         const data = await response.json();
-        setOrgData(data);
+        setOrgData({ ...data.org, services: data.services, sources: data.sources });
       }
     } catch (error) {
       console.error('Error fetching org data:', error);
