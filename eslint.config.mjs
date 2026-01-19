@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Node.js helper scripts
+    "setup-sheets.js",
+    "add-dropdowns.js",
   ]),
 ]);
 

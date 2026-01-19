@@ -159,6 +159,35 @@ export async function POST(request: NextRequest) {
       // Don't fail the lead creation if GHL sync fails
     }
 
+    // Sync to Google Sheets
+    try {
+      const { SheetsClient } = await import('@/lib/sheets-client');
+      const sheetsClient = new SheetsClient();
+
+      const companyTag = org[0].companyTag || 'untagged';
+
+      await sheetsClient.appendLead(companyTag, {
+        contactName: contactName || 'N/A',
+        email: email || '',
+        phone: phone || '',
+        service,
+        source,
+        estimateAmount: estimateAmount || null,
+        estimateStatus,
+        closeStatus,
+        revenue: null,
+        notes: notes || '',
+        tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
+        createdAt: newLead[0].createdAt as Date,
+        companyTag,
+      });
+
+      console.log(`✅ Sheets sync: appended lead to tab "${companyTag}"`);
+    } catch (sheetsError) {
+      console.error('❌ Sheets sync error:', sheetsError);
+      // Don't fail the lead creation if Sheets sync fails
+    }
+
     return NextResponse.json(
       {
         message: 'Lead created successfully',
