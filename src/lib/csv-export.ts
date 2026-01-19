@@ -12,6 +12,7 @@ interface LeadData {
   notes?: string | null;
   tags?: string | null;
   createdAt: Date | number;
+  updatedAt?: Date | number;
   companyTag?: string;
 }
 
@@ -28,6 +29,7 @@ export function convertLeadsToCSV(leads: LeadData[], includeCompanyTag = true): 
 
 function getCSVHeaders(includeCompanyTag = true): string {
   const baseHeaders = [
+    'Lead ID',
     'Contact Name',
     'Email',
     'Phone',
@@ -39,7 +41,8 @@ function getCSVHeaders(includeCompanyTag = true): string {
     'Revenue',
     'Notes',
     'Tags',
-    'Date Created',
+    'Created Date',
+    'Updated Date',
   ];
 
   if (includeCompanyTag) {
@@ -61,9 +64,13 @@ function formatLeadAsCSVRow(lead: LeadData, includeCompanyTag = true): string {
     }
   }
 
-  const createdAt = new Date(lead.createdAt).toLocaleDateString();
+  const createdAt = new Date(lead.createdAt).toISOString().split('T')[0]; // YYYY-MM-DD format
+  const updatedAt = lead.updatedAt
+    ? new Date(lead.updatedAt).toISOString().split('T')[0]
+    : createdAt; // Default to created date if not provided
 
   const fields = [
+    lead.id || '',
     lead.contactName || '',
     lead.email || '',
     lead.phone || '',
@@ -76,6 +83,7 @@ function formatLeadAsCSVRow(lead: LeadData, includeCompanyTag = true): string {
     lead.notes || '',
     tags,
     createdAt,
+    updatedAt,
   ];
 
   if (includeCompanyTag) {
