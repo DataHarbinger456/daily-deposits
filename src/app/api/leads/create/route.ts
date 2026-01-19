@@ -159,35 +159,37 @@ export async function POST(request: NextRequest) {
       // Don't fail the lead creation if GHL sync fails
     }
 
-    // Sync to Google Sheets
-    try {
-      const { SheetsClient } = await import('@/lib/sheets-client');
-      const sheetsClient = new SheetsClient();
+    // Sync to Google Sheets (if org has configured a sheet ID)
+    if (org[0].googleSheetsSpreadsheetId) {
+      try {
+        const { SheetsClient } = await import('@/lib/sheets-client');
+        const sheetsClient = new SheetsClient(org[0].googleSheetsSpreadsheetId);
 
-      const companyTag = org[0].companyTag || 'untagged';
+        const companyTag = org[0].companyTag || 'untagged';
 
-      await sheetsClient.appendLead(companyTag, {
-        id: newLead[0].id,
-        contactName: contactName || 'N/A',
-        email: email || '',
-        phone: phone || '',
-        service,
-        source,
-        estimateAmount: estimateAmount || null,
-        estimateStatus,
-        closeStatus,
-        revenue: null,
-        notes: notes || '',
-        tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
-        createdAt: newLead[0].createdAt as Date,
-        updatedAt: newLead[0].updatedAt as Date,
-        companyTag,
-      });
+        await sheetsClient.appendLead(companyTag, {
+          id: newLead[0].id,
+          contactName: contactName || 'N/A',
+          email: email || '',
+          phone: phone || '',
+          service,
+          source,
+          estimateAmount: estimateAmount || null,
+          estimateStatus,
+          closeStatus,
+          revenue: null,
+          notes: notes || '',
+          tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
+          createdAt: newLead[0].createdAt as Date,
+          updatedAt: newLead[0].updatedAt as Date,
+          companyTag,
+        });
 
-      console.log(`✅ Sheets sync: appended lead to tab "${companyTag}"`);
-    } catch (sheetsError) {
-      console.error('❌ Sheets sync error:', sheetsError);
-      // Don't fail the lead creation if Sheets sync fails
+        console.log(`✅ Sheets sync: appended lead to tab "${companyTag}"`);
+      } catch (sheetsError) {
+        console.error('❌ Sheets sync error:', sheetsError);
+        // Don't fail the lead creation if Sheets sync fails
+      }
     }
 
     return NextResponse.json(

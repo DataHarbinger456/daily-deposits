@@ -103,11 +103,11 @@ export async function PATCH(request: NextRequest) {
       .where(eq(leadsTable.id, leadId))
       .returning();
 
-    // Sync to Google Sheets
-    if (updatedLead && updatedLead.length > 0) {
+    // Sync to Google Sheets (if org has configured a sheet ID)
+    if (updatedLead && updatedLead.length > 0 && org[0].googleSheetsSpreadsheetId) {
       try {
         const { SheetsClient } = await import('@/lib/sheets-client');
-        const sheetsClient = new SheetsClient();
+        const sheetsClient = new SheetsClient(org[0].googleSheetsSpreadsheetId);
 
         const companyTag = org[0].companyTag || 'untagged';
 

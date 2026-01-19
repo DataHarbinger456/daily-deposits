@@ -45,13 +45,19 @@ export class SheetsClient {
   private sheets: ReturnType<typeof google.sheets>;
   private spreadsheetId: string;
 
-  constructor() {
+  constructor(spreadsheetId?: string) {
     const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+    const defaultSpreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 
-    if (!privateKey || !serviceAccountEmail || !spreadsheetId) {
-      throw new Error('Missing Google Sheets environment variables');
+    if (!privateKey || !serviceAccountEmail) {
+      throw new Error('Missing Google Sheets service account environment variables');
+    }
+
+    // Use provided spreadsheet ID or fall back to default from environment
+    const finalSpreadsheetId = spreadsheetId || defaultSpreadsheetId;
+    if (!finalSpreadsheetId) {
+      throw new Error('No spreadsheet ID provided and GOOGLE_SHEETS_SPREADSHEET_ID not set');
     }
 
     const auth = new google.auth.JWT({
@@ -61,7 +67,7 @@ export class SheetsClient {
     });
 
     this.sheets = google.sheets({ version: 'v4', auth });
-    this.spreadsheetId = spreadsheetId;
+    this.spreadsheetId = finalSpreadsheetId;
   }
 
   async appendLead(companyTag: string, lead: SheetLead): Promise<void> {

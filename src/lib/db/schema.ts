@@ -33,6 +33,7 @@ export const orgsTableSqlite = sqliteTable('orgs', {
     .references(() => usersTableSqlite.id, { onDelete: 'cascade' }),
   webhookUrl: text('webhook_url'),
   companyTag: text('company_tag'), // nullable, lowercase with spaces
+  googleSheetsSpreadsheetId: text('google_sheets_spreadsheet_id'), // nullable, per-org Google Sheet
   createdAt: integer('created_at', { mode: 'timestamp' })
     .default(sql`CURRENT_TIMESTAMP`)
     .notNull(),
@@ -115,6 +116,7 @@ export const orgsTablePostgres = pgTable('orgs', {
     .references(() => usersTablePostgres.id, { onDelete: 'cascade' }),
   webhookUrl: varchar('webhook_url', { length: 500 }),
   companyTag: varchar('company_tag', { length: 255 }), // nullable
+  googleSheetsSpreadsheetId: varchar('google_sheets_spreadsheet_id', { length: 255 }), // nullable, per-org Google Sheet
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
