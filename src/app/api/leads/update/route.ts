@@ -94,11 +94,47 @@ export async function PATCH(request: NextRequest) {
     if (updateFields.closeStatus !== undefined) updateData.closeStatus = updateFields.closeStatus;
     if (updateFields.notes !== undefined) updateData.notes = updateFields.notes;
 
+    // Set updatedAt timestamp
+    updateData.updatedAt = new Date();
+
     const updatedLead = await db
       .update(leadsTable)
       .set(updateData)
       .where(eq(leadsTable.id, leadId))
       .returning();
+
+    // Sync to Google Sheets
+    if (updatedLead && updatedLead.length > 0) {
+      try {
+        const { SheetsClient } = await import('@/lib/sheets-client');
+        const sheetsClient = new SheetsClient();
+
+        const companyTag = org[0].companyTag || 'untagged';
+
+        await sheetsClient.updateLead(companyTag, {
+          id: updatedLead[0].id,
+          contactName: updatedLead[0].contactName || 'N/A',
+          email: updatedLead[0].email || '',
+          phone: updatedLead[0].phone || '',
+          service: updatedLead[0].service,
+          source: updatedLead[0].source,
+          estimateAmount: updatedLead[0].estimateAmount,
+          estimateStatus: updatedLead[0].estimateStatus,
+          closeStatus: updatedLead[0].closeStatus,
+          revenue: updatedLead[0].revenue,
+          notes: updatedLead[0].notes || '',
+          tags: updatedLead[0].tags ? JSON.parse(updatedLead[0].tags) : [],
+          createdAt: updatedLead[0].createdAt as Date,
+          updatedAt: updatedLead[0].updatedAt as Date,
+          companyTag,
+        });
+
+        console.log(`✅ Sheets sync: updated lead ${leadId} in tab "${companyTag}"`);
+      } catch (sheetsError) {
+        console.error('❌ Sheets sync error:', sheetsError);
+        // Don't fail the lead update if Sheets sync fails
+      }
+    }
 
     return NextResponse.json({
       message: 'Lead updated successfully',

@@ -1,6 +1,7 @@
 import { google } from 'googleapis';
 
 interface SheetLead {
+  id: string;
   contactName: string;
   email: string;
   phone: string;
@@ -13,6 +14,7 @@ interface SheetLead {
   notes: string;
   tags: string[];
   createdAt: Date;
+  updatedAt: Date;
   companyTag: string;
 }
 
@@ -22,6 +24,7 @@ interface TabInfo {
 }
 
 const SHEET_HEADERS = [
+  'Lead ID',
   'Contact Name',
   'Email',
   'Phone',
@@ -34,6 +37,7 @@ const SHEET_HEADERS = [
   'Notes',
   'Tags',
   'Created Date',
+  'Updated Date',
   'Company Tag',
 ];
 
@@ -69,7 +73,7 @@ export class SheetsClient {
       const leadData = this.formatLeadData(lead);
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `'${tabInfo.title}'!A:M`,
+        range: `'${tabInfo.title}'!A:O`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [leadData],
@@ -78,6 +82,59 @@ export class SheetsClient {
     } catch (error) {
       throw new Error(
         `Failed to append lead to Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  async updateLead(companyTag: string, lead: SheetLead): Promise<void> {
+    try {
+      // Ensure tab exists
+      const tabInfo = await this.ensureTabExists(companyTag);
+
+      // Find the row with this lead ID
+      const rowIndex = await this.findLeadRowIndex(tabInfo.title, lead.id);
+      if (rowIndex === -1) {
+        // Lead not found, append as new
+        await this.appendLead(companyTag, lead);
+        return;
+      }
+
+      // Update the row
+      const leadData = this.formatLeadData(lead);
+      await this.sheets.spreadsheets.values.update({
+        spreadsheetId: this.spreadsheetId,
+        range: `'${tabInfo.title}'!A${rowIndex + 1}:O${rowIndex + 1}`,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: {
+          values: [leadData],
+        },
+      });
+    } catch (error) {
+      throw new Error(
+        `Failed to update lead in Google Sheets: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+    }
+  }
+
+  private async findLeadRowIndex(tabTitle: string, leadId: string): Promise<number> {
+    try {
+      const response = await this.sheets.spreadsheets.values.get({
+        spreadsheetId: this.spreadsheetId,
+        range: `'${tabTitle}'!A:A`,
+      });
+
+      const values = response.data.values || [];
+      // Row 0 is headers, so start from row 1
+      for (let i = 1; i < values.length; i++) {
+        if (values[i]?.[0] === leadId) {
+          return i;
+        }
+      }
+
+      return -1; // Not found
+    } catch (error) {
+      throw new Error(
+        `Failed to find lead row: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     }
   }
@@ -137,7 +194,7 @@ export class SheetsClient {
                   title: companyTag,
                   gridProperties: {
                     rowCount: 1000,
-                    columnCount: 13,
+                    columnCount: 15,
                     frozenRowCount: 1,
                   },
                 },
@@ -202,10 +259,12 @@ export class SheetsClient {
   }
 
   private formatLeadData(lead: SheetLead): (string | number)[] {
-    const formattedDate = lead.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const createdDate = lead.createdAt.toISOString().split('T')[0]; // YYYY-MM-DD format
+    const updatedDate = lead.updatedAt.toISOString().split('T')[0]; // YYYY-MM-DD format
     const tagsStr = lead.tags.join(', ');
 
     return [
+      lead.id,
       lead.contactName,
       lead.email,
       lead.phone,
@@ -217,7 +276,8 @@ export class SheetsClient {
       lead.revenue ?? '',
       lead.notes,
       tagsStr,
-      formattedDate,
+      createdDate,
+      updatedDate,
       lead.companyTag,
     ];
   }

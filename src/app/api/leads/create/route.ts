@@ -167,6 +167,7 @@ export async function POST(request: NextRequest) {
       const companyTag = org[0].companyTag || 'untagged';
 
       await sheetsClient.appendLead(companyTag, {
+        id: newLead[0].id,
         contactName: contactName || 'N/A',
         email: email || '',
         phone: phone || '',
@@ -179,6 +180,7 @@ export async function POST(request: NextRequest) {
         notes: notes || '',
         tags: newLead[0].tags ? JSON.parse(newLead[0].tags) : [],
         createdAt: newLead[0].createdAt as Date,
+        updatedAt: newLead[0].updatedAt as Date,
         companyTag,
       });
 
