@@ -5,7 +5,7 @@ import { ServicesList } from '@/components/org/ServicesList';
 import { SourcesList } from '@/components/org/SourcesList';
 import { WebhookSettings } from '@/components/org/WebhookSettings';
 import { CompanyTagSettings } from '@/components/org/CompanyTagSettings';
-import { GoogleSheetsSettings } from '@/components/org/GoogleSheetsSettings';
+// import { GoogleSheetsSettings } from '@/components/org/GoogleSheetsSettings';
 import { Card } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,7 +15,6 @@ interface OrgData {
   userId: string;
   webhookUrl?: string;
   companyTag?: string;
-  googleSheetsSpreadsheetId?: string;
   services: Array<{ id: string; name: string; orgId: string }>;
   sources: Array<{ id: string; name: string; orgId: string }>;
 }
@@ -120,14 +119,15 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      <Card className="p-6 mt-6">
+      {/* Temporarily disabled for debugging */}
+      {/* <Card className="p-6 mt-6">
         <GoogleSheetsSettings
           orgId={orgData.id}
           userId={orgData.userId}
           initialSpreadsheetId={orgData.googleSheetsSpreadsheetId}
           onSuccess={fetchOrgData}
         />
-      </Card>
+      </Card> */}
 
       <Card className="p-6 mt-6">
         <WebhookSettings
