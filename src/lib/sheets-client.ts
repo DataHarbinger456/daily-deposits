@@ -49,16 +49,32 @@ export class SheetsClient {
     // Handle both escaped (\n) and actual newlines in the private key
     let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
 
-    // If the key still has literal \n sequences (from .env.local), convert them to actual newlines
-    if (privateKey.includes('\\n')) {
+    if (!privateKey) {
+      throw new Error('GOOGLE_PRIVATE_KEY environment variable is not set');
+    }
+
+    // Log key format for debugging
+    const hasEscapedNewlines = privateKey.includes('\\n');
+    const hasActualNewlines = privateKey.includes('\n');
+
+    console.log('[SheetsClient] Private key format:', {
+      hasEscapedNewlines,
+      hasActualNewlines,
+      keyLength: privateKey.length,
+      startsCorrectly: privateKey.includes('BEGIN PRIVATE KEY'),
+      endsCorrectly: privateKey.includes('END PRIVATE KEY'),
+    });
+
+    // If the key has literal \n sequences (from .env.local), convert them to actual newlines
+    if (hasEscapedNewlines) {
       privateKey = privateKey.replace(/\\n/g, '\n');
     }
 
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const defaultSpreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 
-    if (!privateKey || !serviceAccountEmail) {
-      throw new Error('Missing Google Sheets service account environment variables');
+    if (!serviceAccountEmail) {
+      throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is not set');
     }
 
     // Use provided spreadsheet ID or fall back to default from environment
