@@ -46,28 +46,26 @@ export class SheetsClient {
   private spreadsheetId: string;
 
   constructor(spreadsheetId?: string) {
-    // Handle both escaped (\n) and actual newlines in the private key
     let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
 
     if (!privateKey) {
       throw new Error('GOOGLE_PRIVATE_KEY environment variable is not set');
     }
 
-    // Log key format for debugging
-    const hasEscapedNewlines = privateKey.includes('\\n');
-    const hasActualNewlines = privateKey.includes('\n');
+    // Try to decode from base64 first (preferred format for Vercel)
+    if (!privateKey.includes('BEGIN PRIVATE KEY')) {
+      try {
+        privateKey = Buffer.from(privateKey, 'base64').toString('utf-8');
+        console.log('[SheetsClient] Decoded private key from base64');
+      } catch (error) {
+        console.log('[SheetsClient] Could not decode from base64, using as-is');
+      }
+    }
 
-    console.log('[SheetsClient] Private key format:', {
-      hasEscapedNewlines,
-      hasActualNewlines,
-      keyLength: privateKey.length,
-      startsCorrectly: privateKey.includes('BEGIN PRIVATE KEY'),
-      endsCorrectly: privateKey.includes('END PRIVATE KEY'),
-    });
-
-    // If the key has literal \n sequences (from .env.local), convert them to actual newlines
-    if (hasEscapedNewlines) {
+    // Handle escaped newlines (\n) by converting to actual newlines
+    if (privateKey.includes('\\n')) {
       privateKey = privateKey.replace(/\\n/g, '\n');
+      console.log('[SheetsClient] Converted escaped newlines to actual newlines');
     }
 
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
