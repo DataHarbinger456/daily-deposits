@@ -46,7 +46,14 @@ export class SheetsClient {
   private spreadsheetId: string;
 
   constructor(spreadsheetId?: string) {
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    // Handle both escaped (\n) and actual newlines in the private key
+    let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
+
+    // If the key still has literal \n sequences (from .env.local), convert them to actual newlines
+    if (privateKey.includes('\\n')) {
+      privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const defaultSpreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
 
