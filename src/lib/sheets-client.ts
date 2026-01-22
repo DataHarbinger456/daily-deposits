@@ -53,13 +53,23 @@ export class SheetsClient {
       throw new Error('GOOGLE_PRIVATE_KEY environment variable is not set');
     }
 
+    // Remove surrounding quotes if present
+    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
+      privateKey = privateKey.slice(1, -1);
+    }
+
     // Handle both formats:
-    // 1. Escaped newlines: "-----BEGIN...\n...\n-----END..."
-    // 2. Actual newlines from Vercel multiline input
+    // 1. Escaped newlines: -----BEGIN...\n...\n-----END...
+    // 2. Actual newlines from Vercel multiline input (already correct)
 
     // If it has escaped \n sequences, convert to actual newlines
     if (privateKey.includes('\\n')) {
       privateKey = privateKey.replace(/\\n/g, '\n');
+    }
+
+    // Ensure key has proper BEGIN and END markers
+    if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
+      throw new Error('GOOGLE_PRIVATE_KEY does not contain valid BEGIN/END markers');
     }
 
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
