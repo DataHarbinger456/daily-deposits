@@ -44,6 +44,7 @@ const SHEET_HEADERS = [
 export class SheetsClient {
   private sheets: ReturnType<typeof google.sheets>;
   private spreadsheetId: string;
+  private isClientSheet: boolean;
 
   constructor(spreadsheetId?: string) {
     let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
@@ -81,6 +82,9 @@ export class SheetsClient {
       throw new Error('No spreadsheet ID provided and GOOGLE_SHEETS_SPREADSHEET_ID not set');
     }
 
+    // Determine if this is a client sheet (org-specific) or master sheet (env default)
+    this.isClientSheet = !!spreadsheetId;
+
     const auth = new google.auth.JWT({
       email: serviceAccountEmail,
       key: privateKey,
@@ -93,14 +97,20 @@ export class SheetsClient {
 
   async appendLead(companyTag: string, lead: SheetLead): Promise<void> {
     try {
-      // Ensure tab exists
-      const tabInfo = await this.ensureTabExists(companyTag);
+      // For client sheets (using org-specific spreadsheet ID), append to "Raw Data" tab
+      // For master sheet (using environment variable), create tabs by company tag
+      const tabTitle = this.isClientSheet ? 'Raw Data' : companyTag;
+
+      // Ensure tab exists only if using company tag (master sheet)
+      if (!this.isClientSheet) {
+        await this.ensureTabExists(companyTag);
+      }
 
       // Format and append lead data
       const leadData = this.formatLeadData(lead);
       await this.sheets.spreadsheets.values.append({
         spreadsheetId: this.spreadsheetId,
-        range: `'${tabInfo.title}'!A:O`,
+        range: `'${tabTitle}'!A:O`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [leadData],
@@ -115,11 +125,16 @@ export class SheetsClient {
 
   async updateLead(companyTag: string, lead: SheetLead): Promise<void> {
     try {
-      // Ensure tab exists
-      const tabInfo = await this.ensureTabExists(companyTag);
+      // For client sheets, update in "Raw Data" tab; for master sheet, use company tag
+      const tabTitle = this.isClientSheet ? 'Raw Data' : companyTag;
+
+      // Ensure tab exists only if using company tag (master sheet)
+      if (!this.isClientSheet) {
+        await this.ensureTabExists(companyTag);
+      }
 
       // Find the row with this lead ID
-      const rowIndex = await this.findLeadRowIndex(tabInfo.title, lead.id);
+      const rowIndex = await this.findLeadRowIndex(tabTitle, lead.id);
       if (rowIndex === -1) {
         // Lead not found, append as new
         await this.appendLead(companyTag, lead);
@@ -130,7 +145,7 @@ export class SheetsClient {
       const leadData = this.formatLeadData(lead);
       await this.sheets.spreadsheets.values.update({
         spreadsheetId: this.spreadsheetId,
-        range: `'${tabInfo.title}'!A${rowIndex + 1}:O${rowIndex + 1}`,
+        range: `'${tabTitle}'!A${rowIndex + 1}:O${rowIndex + 1}`,
         valueInputOption: 'USER_ENTERED',
         requestBody: {
           values: [leadData],
