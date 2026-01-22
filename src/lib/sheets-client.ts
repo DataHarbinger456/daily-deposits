@@ -47,44 +47,35 @@ export class SheetsClient {
   private isClientSheet: boolean;
 
   constructor(spreadsheetId?: string) {
-    let privateKey = process.env.GOOGLE_PRIVATE_KEY || '';
-
-    if (!privateKey) {
-      throw new Error('GOOGLE_PRIVATE_KEY environment variable is not set');
+    // Parse service account JSON (new approach - avoids newline issues)
+    const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+    if (!serviceAccountJson) {
+      throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON environment variable is not set');
     }
 
-    // Debug: log first/last 50 chars and length
-    console.log(`[Sheets] Key length: ${privateKey.length}`);
-    console.log(`[Sheets] First 50 chars: ${privateKey.substring(0, 50)}`);
-    console.log(`[Sheets] Last 50 chars: ${privateKey.substring(privateKey.length - 50)}`);
+    let serviceAccountData: {
+      private_key: string;
+      client_email: string;
+    };
 
-    // Remove surrounding quotes if present
-    if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
-      privateKey = privateKey.slice(1, -1);
+    try {
+      serviceAccountData = JSON.parse(serviceAccountJson);
+    } catch (error) {
+      throw new Error(
+        `Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON: ${error instanceof Error ? error.message : 'Invalid JSON'}`
+      );
     }
 
-    // Handle both formats:
-    // 1. Escaped newlines: -----BEGIN...\n...\n-----END...
-    // 2. Actual newlines from Vercel multiline input (already correct)
+    const privateKey = serviceAccountData.private_key;
+    const serviceAccountEmail = serviceAccountData.client_email;
 
-    // If it has escaped \n sequences, convert to actual newlines
-    if (privateKey.includes('\\n')) {
-      privateKey = privateKey.replace(/\\n/g, '\n');
+    if (!privateKey || !serviceAccountEmail) {
+      throw new Error(
+        'GOOGLE_SERVICE_ACCOUNT_JSON missing required fields: private_key and client_email'
+      );
     }
 
-    // Check for markers (more flexible - just check for "PRIVATE KEY")
-    if (!privateKey.includes('PRIVATE KEY')) {
-      console.error('[Sheets] Key does not contain "PRIVATE KEY"');
-      console.error('[Sheets] Key content:', privateKey.substring(0, 200));
-      throw new Error('GOOGLE_PRIVATE_KEY does not contain valid PRIVATE KEY markers');
-    }
-
-    const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
     const defaultSpreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-
-    if (!serviceAccountEmail) {
-      throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is not set');
-    }
 
     // Use provided spreadsheet ID or fall back to default from environment
     const finalSpreadsheetId = spreadsheetId || defaultSpreadsheetId;
