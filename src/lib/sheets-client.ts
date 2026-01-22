@@ -53,6 +53,11 @@ export class SheetsClient {
       throw new Error('GOOGLE_PRIVATE_KEY environment variable is not set');
     }
 
+    // Debug: log first/last 50 chars and length
+    console.log(`[Sheets] Key length: ${privateKey.length}`);
+    console.log(`[Sheets] First 50 chars: ${privateKey.substring(0, 50)}`);
+    console.log(`[Sheets] Last 50 chars: ${privateKey.substring(privateKey.length - 50)}`);
+
     // Remove surrounding quotes if present
     if (privateKey.startsWith('"') && privateKey.endsWith('"')) {
       privateKey = privateKey.slice(1, -1);
@@ -67,9 +72,11 @@ export class SheetsClient {
       privateKey = privateKey.replace(/\\n/g, '\n');
     }
 
-    // Ensure key has proper BEGIN and END markers
-    if (!privateKey.includes('BEGIN PRIVATE KEY') || !privateKey.includes('END PRIVATE KEY')) {
-      throw new Error('GOOGLE_PRIVATE_KEY does not contain valid BEGIN/END markers');
+    // Check for markers (more flexible - just check for "PRIVATE KEY")
+    if (!privateKey.includes('PRIVATE KEY')) {
+      console.error('[Sheets] Key does not contain "PRIVATE KEY"');
+      console.error('[Sheets] Key content:', privateKey.substring(0, 200));
+      throw new Error('GOOGLE_PRIVATE_KEY does not contain valid PRIVATE KEY markers');
     }
 
     const serviceAccountEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
